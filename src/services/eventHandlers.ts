@@ -8,23 +8,13 @@ export class EventHandlers {
     value: string,
     hydCodeFilter: HydCode,
     setHydCodeFilter: (filter: HydCode) => void,
-    setFilterHighlightSet: (set: string[]) => void,
-    components: Component[]
+    setFilterHighlightSet: (set: string[]) => void
   ): void {
     const newFilter = { ...hydCodeFilter, [level]: value };
     setHydCodeFilter(newFilter);
 
-    // 更新筛选高亮集
-    const filteredComponents = components.filter(component => {
-      return Object.keys(newFilter).every(key => {
-        if (key === 'project') return true;
-        const filterValue = newFilter[key as keyof HydCode];
-        const componentValue = component.hydCode[key as keyof HydCode];
-        return !filterValue || componentValue === filterValue;
-      });
-    });
-
-    setFilterHighlightSet(filteredComponents.map(comp => comp.id));
+    // Clear filter highlight set since filtering now happens at component level
+    setFilterHighlightSet([]);
   }
 
   // RISC筛选变更处理

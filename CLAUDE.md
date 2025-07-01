@@ -67,6 +67,13 @@ The application's core feature allows binding construction files to BIM componen
 - File filtering by type, user, and date ranges
 - Real-time component highlighting based on active filters
 
+### Advanced HyD Code Filtering Logic
+The application implements sophisticated item-component interaction when HyD filtering is active:
+- **Case 1**: When clicked item's components are all within HyD filter scope → directly highlight components
+- **Case 2**: When clicked item's components extend beyond HyD filter scope → show confirmation dialog asking user to clear filters and view all related components
+- Confirmation dialog ensures no side effects when user cancels the operation
+- Critical implementation detail: HyD filtering check must occur FIRST in `handleListItemClick` before any state changes
+
 ## Working with the Codebase
 
 ### Component Interaction Patterns

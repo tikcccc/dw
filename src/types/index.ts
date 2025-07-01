@@ -157,6 +157,18 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   lastLogin: string;
+}
+
+export enum UserRole {
+  ADMINISTRATOR = 'Administrator',
+  AUTHORIZED_USER = 'Authorized User', 
+  VIEW_ONLY_USER = 'View-only User'
+}
+
+export interface AddFileToSelectedState {
+  isEnabled: boolean;
+  reason?: string;
+  componentCount: number;
 } 

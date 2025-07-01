@@ -242,6 +242,7 @@ const DWSSBIMDashboard = () => {
   
   // Add missing state variables
   const [bindingCart, setBindingCart] = useState<BindingCart>({ files: [], objects: [], hasHistoricalObjects: false });
+  const [autoOpenUploadModal, setAutoOpenUploadModal] = useState<boolean>(false);
   const [showBindingCart, setShowBindingCart] = useState(false);
   const [detailItem, setDetailItem] = useState<any>(null);
   
@@ -678,6 +679,35 @@ const DWSSBIMDashboard = () => {
     return currentUser === 'Administrator' || currentUser === 'John Doe' || currentUser === 'Jane Smith';
   };
 
+  // Handle adding file for selected components
+  const handleAddFileForSelectedComponents = (): void => {
+    const finalHighlightSet = getFinalHighlightSet();
+    
+    // Check if any components are highlighted
+    if (finalHighlightSet.length === 0) {
+      return; // Button should be disabled in this case
+    }
+    
+    // Show confirmation dialog with the specified format
+    const confirmResult = confirm(
+      `确认文件关联\n\n` +
+      `您已选择了 ${finalHighlightSet.length} 个BIM构件。\n\n` +
+      `是否立即从ACC平台添加新文件，并与这些构件建立关联？\n\n` +
+      `点击确认后，将跳转至文件管理页面并自动开始添加流程。`
+    );
+    
+    if (confirmResult) {
+      // Store the selected component IDs for use in the file management page
+      setSelectedComponentsForFiles(finalHighlightSet);
+      
+      // Navigate to file management page
+      setShowFileManagement(true);
+      
+      // Set a flag to automatically open the upload modal when the page loads
+      setAutoOpenUploadModal(true);
+    }
+  };
+
   // Check if user is admin
   const isAdmin = () => {
     return currentUser === 'Administrator';
@@ -1014,10 +1044,17 @@ const DWSSBIMDashboard = () => {
     return filtered;
   };
 
-  // Filter components - Updated to filter based on modelVersionId
+  // Filter components - Updated to filter based on modelVersionId and HyD codes
   const getFilteredObjectGroups = () => {
     // Get all components based on selected model version
-    return components.filter(obj => obj.modelVersionId === selectedModelVersion);
+    let filteredComponents = components.filter(obj => obj.modelVersionId === selectedModelVersion);
+    
+    // Apply HyD code filtering if active
+    if (hasHydCodeFilter()) {
+      filteredComponents = filteredComponents.filter(obj => matchesHydCodeFilter(obj.hydCode));
+    }
+    
+    return filteredComponents;
   };
 
   // Get list of component IDs that match HyD Code filter conditions
@@ -1081,23 +1118,8 @@ const DWSSBIMDashboard = () => {
       return newHydCodeFilter[key as keyof HydCode] !== '';
     });
     
-    let newFilterHighlightSet: string[] = [];
-    
-    // Only calculate filter highlight set when there are actual filter conditions
-    if (hasAnyFilter) {
-      newFilterHighlightSet = components
-        .filter(obj => obj.modelVersionId === selectedModelVersion)
-        .filter(obj => {
-          return Object.keys(newHydCodeFilter).every(key => {
-            if (key === 'project') return true; // project field is not used in filtering
-            if (!newHydCodeFilter[key as keyof HydCode]) return true;
-            return obj.hydCode[key as keyof HydCode] === newHydCodeFilter[key as keyof HydCode];
-          });
-        })
-        .map(obj => obj.id);
-    }
-    
-    setFilterHighlightSet(newFilterHighlightSet);
+    // Clear filter highlight set since filtering now happens at component level
+    setFilterHighlightSet([]);
     
     // Clear other states
     setSelectedRISC(null);
@@ -1131,96 +1153,159 @@ const DWSSBIMDashboard = () => {
     // Clear model tree highlight state
     clearTreeHighlight();
     
-          // Check if this is a deleted item (historical binding and component no longer exists)
-      if ('bindingStatus' in item && item.bindingStatus === 'history' && !item.linkedToCurrent) {
-        // Click on deleted item: show historical view floating panel but don't highlight any components (since they no longer exist)
-        const boundModelVersionId = item.boundModelVersionId || 'v1.8'; // Model version ID when binding was created
-        const currentModelVersionId = 'current'; // Current latest version ID
+    // Check if in HyD Code filtering mode FIRST - before any state changes
+    if (hasHydCodeFilter()) {
+      // Get the components that match current HyD Code filter
+      const filteredComponentIds = getHydCodeFilteredComponents();
+      
+      // Get components related to the clicked item
+      const itemComponentIds = item.objects || [];
+      
+      // Check if all item components are within the filtered scope
+      const itemComponentsInFilter = itemComponentIds.filter(id => 
+        filteredComponentIds.includes(id)
+      );
+      
+      // Case 1: All item components are within filter scope - proceed with highlighting
+      if (itemComponentsInFilter.length === itemComponentIds.length && itemComponentIds.length > 0) {
+        // All components are in filter scope, highlight them
+        setManualHighlightSet(itemComponentIds);
         
-        // Set selection state
-        setSelectedRISC(type === 'risc' ? item.id : null);
-        setSelectedFile(type === 'file' ? item.id : null);
-        setManualHighlightSet([]); // Don't highlight any components since they no longer exist
-        
-        // Show floating panel with deleted item information
-        const historicalInfo: HistoricalComponentInfo = {
-          componentId: item.objects.length > 0 ? item.objects[0] : 'DELETED-COMPONENT',
-          currentVersionId: currentModelVersionId,
-          historicalVersionId: boundModelVersionId,
-          fileInfo: item,
-          fileType: type as 'file' | 'risc',
-          changes: item.changes || ['Component has been deleted from latest version', 'Components associated with this item no longer exist in current model']
-        };
-        
-        // Show floating panel
-        setFloatingPanel({
-          visible: true,
-          componentInfo: historicalInfo,
-          isHistoricalView: false // Initially show current view
-        });
-        
-        // Save original model version
-        setOriginalModelVersion(selectedModelVersion);
-        return;
-      }
-
-          // Check if this is an item with historical component binding
-      if ('bindingStatus' in item && item.bindingStatus === 'history' && item.linkedToCurrent) {
-        // Click on item with historical component binding: highlight components with same ID in current view
-        const componentIds = item.objects; // List of bound component IDs
-        const boundModelVersionId = item.boundModelVersionId || 'v1.8'; // Model version ID when binding was created
-        const currentModelVersionId = 'current'; // Current latest version ID
-        
-        if (componentIds.length > 0) {
-          // Highlight components with same ID in current view (regardless of current view version)
-          const currentViewComponents = components.filter(c => 
-            componentIds.includes(c.id) && c.modelVersionId === selectedModelVersion
-          );
-          
-          if (currentViewComponents.length > 0) {
-            setManualHighlightSet(currentViewComponents.map(c => c.id));
-            setSelectedRISC(type === 'risc' ? item.id : null);
-            setSelectedFile(type === 'file' ? item.id : null);
-            
-            // If item's bound version ID is not latest version, show floating panel
-            if (boundModelVersionId !== currentModelVersionId) {
-              // Create historical component info using first component
-              const firstComponentId = componentIds[0];
-              const historicalInfo: HistoricalComponentInfo = {
-                componentId: firstComponentId,
-                currentVersionId: currentModelVersionId,
-                historicalVersionId: boundModelVersionId,
-                fileInfo: item,
-                fileType: type as 'file' | 'risc',
-                changes: item.changes || ['Version difference information', 'Component properties updated']
-              };
-              
-              // Show floating panel
-              setFloatingPanel({
-                visible: true,
-                componentInfo: historicalInfo,
-                isHistoricalView: false // Initially show current view
-              });
-              
-              // Save original model version
-              setOriginalModelVersion(selectedModelVersion);
-            }
-          }
+        // Update selection state
+        if (type === 'risc') {
+          setSelectedRISC(item.id);
+          setSelectedFile(null);
+        } else if (type === 'file') {
+          setSelectedFile(item.id);
+          setSelectedRISC(null);
         }
         return;
       }
-    
-          // Handle normal item click
-      if ('objects' in item && item.objects.length > 0) {
-        const componentIds = item.objects;
-        const boundModelVersionId = item.boundModelVersionId || 'current';
-        const currentModelVersionId = 'current';
+      
+      // Case 2: Some or all item components are outside filter scope
+      const confirmMessage = `该条目关联的构件超出了您当前的筛选范围，是否要清除筛选并查看所有关联构件？`;
+      
+      if (confirm(confirmMessage)) {
+        // User chooses to clear filter and view all related components
+        // 1. Clear all HyD Code filter states
+        setHydCodeFilter({
+          project: 'HY202404',
+          contractor: '',
+          location: '',
+          structure: '',
+          space: '',
+          grid: '',
+          cat: ''
+        });
+        setFilterHighlightSet([]);
         
-        // Always highlight components with matching IDs in current view
+        // 2. Highlight all components related to this item
+        setManualHighlightSet(itemComponentIds);
+        
+        // 3. Update selection state
+        if (type === 'risc') {
+          setSelectedRISC(item.id);
+          setSelectedFile(null);
+        } else if (type === 'file') {
+          setSelectedFile(item.id);
+          setSelectedRISC(null);
+        }
+      }
+      // If user clicks "Cancel", do nothing - dialog closes and interface remains as is
+      return;
+    }
+
+    // Handle historical component binding cases (non-HyD filtering mode)
+    // Check if this is a deleted item (historical binding and component no longer exists)
+    if ('bindingStatus' in item && item.bindingStatus === 'history' && !item.linkedToCurrent) {
+      // Click on deleted item: show historical view floating panel but don't highlight any components (since they no longer exist)
+      const boundModelVersionId = item.boundModelVersionId || 'v1.8'; // Model version ID when binding was created
+      const currentModelVersionId = 'current'; // Current latest version ID
+      
+      // Set selection state
+      setSelectedRISC(type === 'risc' ? item.id : null);
+      setSelectedFile(type === 'file' ? item.id : null);
+      setManualHighlightSet([]); // Don't highlight any components since they no longer exist
+      
+      // Show floating panel with deleted item information
+      const historicalInfo: HistoricalComponentInfo = {
+        componentId: item.objects.length > 0 ? item.objects[0] : 'DELETED-COMPONENT',
+        currentVersionId: currentModelVersionId,
+        historicalVersionId: boundModelVersionId,
+        fileInfo: item,
+        fileType: type as 'file' | 'risc',
+        changes: item.changes || ['Component has been deleted from latest version', 'Components associated with this item no longer exist in current model']
+      };
+      
+      // Show floating panel
+      setFloatingPanel({
+        visible: true,
+        componentInfo: historicalInfo,
+        isHistoricalView: false // Initially show current view
+      });
+      
+      // Save original model version
+      setOriginalModelVersion(selectedModelVersion);
+      return;
+    }
+
+    // Check if this is an item with historical component binding
+    if ('bindingStatus' in item && item.bindingStatus === 'history' && item.linkedToCurrent) {
+      // Click on item with historical component binding: highlight components with same ID in current view
+      const componentIds = item.objects; // List of bound component IDs
+      const boundModelVersionId = item.boundModelVersionId || 'v1.8'; // Model version ID when binding was created
+      const currentModelVersionId = 'current'; // Current latest version ID
+      
+      if (componentIds.length > 0) {
+        // Highlight components with same ID in current view (regardless of current view version)
         const currentViewComponents = components.filter(c => 
           componentIds.includes(c.id) && c.modelVersionId === selectedModelVersion
         );
+        
+        if (currentViewComponents.length > 0) {
+          setManualHighlightSet(currentViewComponents.map(c => c.id));
+          setSelectedRISC(type === 'risc' ? item.id : null);
+          setSelectedFile(type === 'file' ? item.id : null);
+          
+          // If item's bound version ID is not latest version, show floating panel
+          if (boundModelVersionId !== currentModelVersionId) {
+            // Create historical component info using first component
+            const firstComponentId = componentIds[0];
+            const historicalInfo: HistoricalComponentInfo = {
+              componentId: firstComponentId,
+              currentVersionId: currentModelVersionId,
+              historicalVersionId: boundModelVersionId,
+              fileInfo: item,
+              fileType: type as 'file' | 'risc',
+              changes: item.changes || ['Version difference information', 'Component properties updated']
+            };
+            
+            // Show floating panel
+            setFloatingPanel({
+              visible: true,
+              componentInfo: historicalInfo,
+              isHistoricalView: false // Initially show current view
+            });
+            
+            // Save original model version
+            setOriginalModelVersion(selectedModelVersion);
+          }
+        }
+      }
+      return;
+    }
+    
+    // Handle normal item click
+    if ('objects' in item && item.objects.length > 0) {
+      const componentIds = item.objects;
+      const boundModelVersionId = item.boundModelVersionId || 'current';
+      const currentModelVersionId = 'current';
       
+      // Always highlight components with matching IDs in current view
+      const currentViewComponents = components.filter(c => 
+        componentIds.includes(c.id) && c.modelVersionId === selectedModelVersion
+      );
+    
       if (currentViewComponents.length > 0) {
         setManualHighlightSet(currentViewComponents.map(c => c.id));
         
@@ -1246,72 +1331,6 @@ const DWSSBIMDashboard = () => {
           setOriginalModelVersion(selectedModelVersion);
         }
       }
-    }
-    
-    // Check if in HyD Code filtering mode
-    if (hasHydCodeFilter()) {
-      const finalHighlightSet = getFinalHighlightSet();
-      
-      // Case 1: No components are highlighted in the view, or no item is selected
-      if (finalHighlightSet.length === 0 || (selectedRISC === null && selectedFile === null)) {
-        const confirmMessage = `HyD Code filtering is currently active.\n\nDo you want to exit the current HyD Code filtering and select components based only on this item?\n\nClick "OK" to clear the current filter and show only content related to this item.\nClick "Cancel" to maintain the current filter status.`;
-        
-        if (confirm(confirmMessage)) {
-          // User chooses to exit filtering mode
-          // 1. Clear all HyD Code filter states
-          setHydCodeFilter({
-            project: 'HY202404',
-            contractor: '',
-            location: '',
-            structure: '',
-            space: '',
-            grid: '',
-            cat: ''
-          });
-          setFilterHighlightSet([]);
-          
-          // 2. Establish new manual highlight set
-          setManualHighlightSet(item.objects);
-          
-          // 3. Update selection state
-          if (type === 'risc') {
-            setSelectedRISC(item.id);
-            setSelectedFile(null);
-          } else if (type === 'file') {
-            setSelectedFile(item.id);
-            setSelectedRISC(null);
-          }
-        }
-        return;
-      }
-      
-      // Case 2: There are continuously highlighted components in the view
-      // Prompt the user whether to exit HyD Code filtering
-      const confirmMessage = `HyD Code filtering is currently active.\n\nDo you want to exit the current HyD Code filtering and select components based only on this item?\n\nClick "OK" to clear the current filter and show only content related to this item.\nClick "Cancel" to maintain the current filter status.`;
-      
-      if (confirm(confirmMessage)) {
-        // User chooses to exit filtering mode
-        setHydCodeFilter({
-          project: 'HY202404',
-          contractor: '',
-          location: '',
-          structure: '',
-          space: '',
-          grid: '',
-          cat: ''
-        });
-        setFilterHighlightSet([]);
-        setManualHighlightSet(item.objects);
-        
-        if (type === 'risc') {
-          setSelectedRISC(item.id);
-          setSelectedFile(null);
-        } else if (type === 'file') {
-          setSelectedFile(item.id);
-          setSelectedRISC(null);
-        }
-      }
-      return;
     }
 
     // Normal click logic in non-HyD Code filtering mode
@@ -1927,6 +1946,13 @@ const DWSSBIMDashboard = () => {
     const typeToDelete = fileTypes.find(t => t.id === typeId);
     if (!typeToDelete) return;
     
+    // Check if any files are using this file type
+    const filesUsingType = files.filter(file => file.type === typeToDelete.name);
+    if (filesUsingType.length > 0) {
+      alert(`Cannot delete file type "${typeToDelete.name}" because it is being used by ${filesUsingType.length} file(s).`);
+      return;
+    }
+    
     if (confirm(`Are you sure you want to delete file type "${typeToDelete.name}"? This action cannot be undone.`)) {
       setFileTypes(prev => prev.filter(type => type.id !== typeId));
       
@@ -1974,7 +2000,7 @@ const DWSSBIMDashboard = () => {
     const actualStatus = getActualBindingStatus(item);
     switch (actualStatus) {
       case 'current': return null;
-      case 'history': return <Clock className="w-4 h-4 text-orange-500" />;
+      case 'history': return null; // Removed Clock icon
       case 'deleted': return <Trash2 className="w-4 h-4 text-red-500" />;
       default: return null;
     }
@@ -2118,7 +2144,7 @@ const DWSSBIMDashboard = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Invite Member</h3>
+            <h3 className="text-lg font-semibold">邀请成员</h3>
             <button 
               onClick={() => {
                 setShowInviteModal(false);
@@ -2131,52 +2157,69 @@ const DWSSBIMDashboard = () => {
             </button>
           </div>
           
+          <div className="flex mb-4">
+            <button 
+              onClick={() => setInviteTab('link')}
+              className={`flex-1 py-2 px-4 rounded-l-md ${inviteTab === 'link' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              通过链接邀请
+            </button>
+            <button 
+              onClick={() => setInviteTab('email')}
+              className={`flex-1 py-2 px-4 rounded-r-md ${inviteTab === 'email' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+            >
+              通过邮箱邀请
+            </button>
+          </div>
+          
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign Role
+                分配角色
               </label>
-              <div className="text-xs text-gray-500 mb-2">* Required field</div>
+              <div className="text-xs text-gray-500 mb-2">* 必填字段</div>
               <select 
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
                 className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                title="Select User Role"
+                title="选择用户角色"
               >
-                <option value="">Project Member ×</option>
+                <option value="">项目成员 ×</option>
                 <option value="View-only User">View-only User</option>
                 <option value="Authorized User">Authorized User</option>
                 <option value="Admin">Admin</option>
               </select>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Enter Email
-              </label>
-              <div className="text-xs text-gray-500 mb-2">* Enter email address</div>
-              <div className="relative">
-                <input 
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="Enter email address here, e.g. abc@jarvis.com"
-                  className="w-full border rounded-md px-3 py-2 pr-16 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                  <button className="p-1 text-green-600 hover:text-green-700" title="Verify Email">
-                    <CheckCircle className="w-4 h-4" />
-                  </button>
-                  <button className="p-1 text-gray-400 hover:text-gray-600" title="Send Email">
-                    <Mail className="w-4 h-4" />
-                  </button>
+            {inviteTab === 'email' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  输入邮箱
+                </label>
+                <div className="text-xs text-gray-500 mb-2">* 输入邮箱地址</div>
+                <div className="relative">
+                  <input 
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="在此输入邮箱地址，例如 abc@jarvis.com"
+                    className="w-full border rounded-md px-3 py-2 pr-16 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                    <button className="p-1 text-green-600 hover:text-green-700" title="验证邮箱">
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <button className="p-1 text-gray-400 hover:text-gray-600" title="发送邮件">
+                      <Mail className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center text-xs text-blue-600">
+                  <Info className="w-3 h-3 mr-1" />
+                  <span>可输入多个邮箱地址，用换行符分隔，实现批量邀请</span>
                 </div>
               </div>
-              <div className="mt-2 flex items-center text-xs text-blue-600">
-                <Info className="w-3 h-3 mr-1" />
-                <span>Enter email addresses, separate multiple recipients with line breaks for batch invites</span>
-              </div>
-            </div>
+            )}
           </div>
           
           <div className="mt-6 flex justify-end">
@@ -2184,7 +2227,7 @@ const DWSSBIMDashboard = () => {
               onClick={handleSendInvite}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              Send Invitation
+              发送邀请
             </button>
           </div>
         </div>
@@ -2447,12 +2490,14 @@ const DWSSBIMDashboard = () => {
     // User invitation modal in admin page
     const AdminInviteUserModal = () => {
       if (!showAdminInviteModal) return null;
+      
+      const [inviteTab, setInviteTab] = useState('email'); // 'email' or 'link'
 
       return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Invite Member</h3>
+              <h3 className="text-lg font-semibold">邀请成员</h3>
               <button 
                 onClick={() => {
                   setShowAdminInviteModal(false);
@@ -2466,52 +2511,69 @@ const DWSSBIMDashboard = () => {
               </button>
             </div>
             
+            {/* Tabs */}
+            <div className="flex border-b mb-4">
+              <button
+                className={`py-2 px-4 ${inviteTab === 'link' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                onClick={() => setInviteTab('link')}
+              >
+                通过链接邀请
+              </button>
+              <button
+                className={`py-2 px-4 ${inviteTab === 'email' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                onClick={() => setInviteTab('email')}
+              >
+                通过邮箱邀请
+              </button>
+            </div>
+            
             <div className="space-y-4">
+              {/* Role selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assign Role
+                  <span className="text-red-500">*</span> 分配角色
                 </label>
-                <div className="text-xs text-gray-500 mb-2">* Required field</div>
                 <select 
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
                   className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  title="Select User Role"
                 >
-                  <option value="">Project Member ×</option>
+                  <option value="">项目成员 ×</option>
                   <option value="View-only User">View-only User</option>
                   <option value="Authorized User">Authorized User</option>
                   <option value="Admin">Admin</option>
                 </select>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Enter Email
-                </label>
-                <div className="text-xs text-gray-500 mb-2">* Enter email address</div>
-                <div className="relative">
-                  <input 
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="Enter email address here, e.g. abc@jarvis.com"
-                    className="w-full border rounded-md px-3 py-2 pr-16 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
-                    <button className="p-1 text-green-600 hover:text-green-700" title="Verify Email">
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-gray-400 hover:text-gray-600" title="Send Email">
-                      <Mail className="w-4 h-4" />
-                    </button>
+              {/* Email input for email tab */}
+              {inviteTab === 'email' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <span className="text-red-500">*</span> 输入邮箱
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="在此处输入邀请人员邮箱地址，例如 abc@jarvis.com"
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+                      <button className="p-1 text-green-600 hover:text-green-700" title="Verify Email">
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button className="p-1 text-green-600 hover:text-green-700" title="Send Email">
+                        <Mail className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                    <Info className="w-3 h-3 mr-1 flex-shrink-0" />
+                    <span>输入邀请人邮箱，可通过换行分隔多个邮箱批量邀请</span>
                   </div>
                 </div>
-                <div className="mt-2 flex items-center text-xs text-blue-600">
-                  <Info className="w-3 h-3 mr-1" />
-                  <span>Enter email addresses, separate multiple recipients with line breaks for batch invites</span>
-                </div>
-              </div>
+              )}
             </div>
             
             <div className="mt-6 flex justify-end">
@@ -2519,7 +2581,7 @@ const DWSSBIMDashboard = () => {
                 onClick={handleSendInvite}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
-                Send Invitation
+                发送邀请
               </button>
             </div>
           </div>
@@ -2706,8 +2768,6 @@ const DWSSBIMDashboard = () => {
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="text-left py-3 px-4 font-medium">File Type Name</th>
-                <th className="text-left py-3 px-4 font-medium">Color</th>
-                <th className="text-left py-3 px-4 font-medium">Preview</th>
                 <th className="text-left py-3 px-4 font-medium">Actions</th>
               </tr>
             </thead>
@@ -2733,54 +2793,6 @@ const DWSSBIMDashboard = () => {
                     ) : (
                       <span className="text-sm font-medium">{type.name}</span>
                     )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`inline-block w-4 h-4 rounded-full ${
-                      type.color === 'red' ? 'bg-red-500' :
-                      type.color === 'blue' ? 'bg-blue-500' :
-                      type.color === 'green' ? 'bg-green-500' :
-                      type.color === 'purple' ? 'bg-purple-500' :
-                      type.color === 'orange' ? 'bg-orange-500' :
-                      type.color === 'indigo' ? 'bg-indigo-500' :
-                      type.color === 'pink' ? 'bg-pink-500' :
-                      'bg-yellow-500'
-                    }`}></span>
-                    <span className="ml-2 text-sm text-gray-600 capitalize">{type.color}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center">
-                      <div className={`w-8 h-8 ${
-                        type.color === 'red' ? 'bg-red-100' :
-                        type.color === 'blue' ? 'bg-blue-100' :
-                        type.color === 'green' ? 'bg-green-100' :
-                        type.color === 'purple' ? 'bg-purple-100' :
-                        type.color === 'orange' ? 'bg-orange-100' :
-                        type.color === 'indigo' ? 'bg-indigo-100' :
-                        type.color === 'pink' ? 'bg-pink-100' :
-                        'bg-yellow-100'
-                      } rounded flex items-center justify-center mr-2`}>
-                        <FileText className={`w-4 h-4 ${
-                          type.color === 'red' ? 'text-red-500' :
-                          type.color === 'blue' ? 'text-blue-500' :
-                          type.color === 'green' ? 'text-green-500' :
-                          type.color === 'purple' ? 'text-purple-500' :
-                          type.color === 'orange' ? 'text-orange-500' :
-                          type.color === 'indigo' ? 'text-indigo-500' :
-                          type.color === 'pink' ? 'text-pink-500' :
-                          'text-yellow-500'
-                        }`} />
-                      </div>
-                      <span className={`text-sm ${
-                        type.color === 'red' ? 'text-red-500' :
-                        type.color === 'blue' ? 'text-blue-500' :
-                        type.color === 'green' ? 'text-green-500' :
-                        type.color === 'purple' ? 'text-purple-500' :
-                        type.color === 'orange' ? 'text-orange-500' :
-                        type.color === 'indigo' ? 'text-indigo-500' :
-                        type.color === 'pink' ? 'text-pink-500' :
-                        'text-yellow-500'
-                      }`}>{type.name}</span>
-                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex space-x-2">
@@ -3998,6 +4010,7 @@ const DWSSBIMDashboard = () => {
     const [fileToDelete, setFileToDelete] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteSuccess, setDeleteSuccess] = useState<{show: boolean, count: number}>({show: false, count: 0});
+    const [uploadSuccess, setUploadSuccess] = useState<{show: boolean, count: number, componentCount: number}>({show: false, count: 0, componentCount: 0});
     const [showEditModal, setShowEditModal] = useState(false);
     const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
     const [fileTypeSelections, setFileTypeSelections] = useState<{[fileId: string]: string}>({});
@@ -4008,6 +4021,14 @@ const DWSSBIMDashboard = () => {
     const [dateFilter, setDateFilter] = useState<{start: string, end: string}>({start: '', end: ''});
     const [typeFilter, setTypeFilter] = useState<string>('');
     const [showMyFilesOnly, setShowMyFilesOnly] = useState(false);
+    
+    // Auto-open upload modal when page loads if flag is set
+    useEffect(() => {
+      if (autoOpenUploadModal) {
+        setShowUploadModal(true);
+        setAutoOpenUploadModal(false); // Reset the flag
+      }
+    }, []);
     
     // 固定的文件类型选项
     const fileTypes = ['Construction Plan', 'Material Submission', 'Construction Drawing', 'Test Report'];
@@ -4408,6 +4429,19 @@ const DWSSBIMDashboard = () => {
       
       // Update file list
       setFiles(prev => [...prev, ...newFiles]);
+      
+      // Show success message
+      setUploadSuccess({
+        show: true, 
+        count: newFiles.length,
+        componentCount: selectedComponentsForFiles.length
+      });
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setUploadSuccess({show: false, count: 0, componentCount: 0});
+      }, 3000);
+      
       resetUploadModal();
     };
     
@@ -4516,6 +4550,18 @@ const DWSSBIMDashboard = () => {
         <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center z-50">
           <CheckCircle className="w-5 h-5 mr-2" />
           <span>Successfully deleted {deleteSuccess.count} files</span>
+        </div>
+      );
+    };
+    
+    // Upload success toast
+    const UploadSuccessToast = () => {
+      if (!uploadSuccess.show) return null;
+      
+      return (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center z-50">
+          <CheckCircle className="w-5 h-5 mr-2" />
+          <span>文件添加成功，并已与 {uploadSuccess.componentCount} 个构件关联</span>
         </div>
       );
     };
@@ -4709,14 +4755,10 @@ const DWSSBIMDashboard = () => {
       setTimeout(() => {
         setFiles(prevFiles => prevFiles.map(file => {
           if (file.id === fileToEdit.id) {
-            // 创建新版本
-            const newVersion = (file.version || 1) + 1;
             return {
               ...file,
-              name: editedFileName,
               type: editedFileType,
-              updateDate: new Date().toISOString().split('T')[0],
-              version: newVersion
+              updateDate: new Date().toISOString().split('T')[0]
             };
           }
           return file;
@@ -4736,8 +4778,6 @@ const DWSSBIMDashboard = () => {
     // 文件编辑模态框
     const EditFileModal = () => {
       if (!showEditModal || !fileToEdit) return null;
-      
-      const currentVersion = fileToEdit.version || 1;
       
       return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -4761,9 +4801,10 @@ const DWSSBIMDashboard = () => {
                   type="text"
                   id="fileName"
                   value={editedFileName}
-                  onChange={(e) => setEditedFileName(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={true}
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">File name cannot be changed</p>
               </div>
               
               <div>
@@ -4780,13 +4821,6 @@ const DWSSBIMDashboard = () => {
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <History className="w-4 h-4" />
-                <span>Current version: v{currentVersion}</span>
-                <span className="mx-2">•</span>
-                <span>After editing, it will be upgraded to: v{currentVersion + 1}</span>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -4810,7 +4844,6 @@ const DWSSBIMDashboard = () => {
               <button 
                 onClick={saveEditedFile}
                 className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700"
-                disabled={!editedFileName.trim()}
               >
                 Save
               </button>
@@ -4827,7 +4860,7 @@ const DWSSBIMDashboard = () => {
       return (
         <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center z-50">
           <CheckCircle className="w-5 h-5 mr-2" />
-            <span>File edited successfully, version updated</span>
+            <span>File edited successfully</span>
         </div>
       );
     };
@@ -5041,9 +5074,6 @@ const DWSSBIMDashboard = () => {
                       Type
                     </th>
                     <th className="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Version
-                    </th>
-                    <th className="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Upload Date
                     </th>
                     <th className="p-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -5083,7 +5113,6 @@ const DWSSBIMDashboard = () => {
                           </div>
                         </td>
                         <td className="p-3">{file.type}</td>
-                        <td className="p-3">v{file.version || 1}</td>
                         <td className="p-3">{file.uploadDate}</td>
                         <td className="p-3">{file.updateDate}</td>
                         <td className="p-3 text-sm text-gray-600">{file.uploadedBy}</td>
@@ -5184,6 +5213,9 @@ const DWSSBIMDashboard = () => {
         
         {/* Delete Success Toast */}
         <DeleteSuccessToast />
+        
+        {/* Upload Success Toast */}
+        <UploadSuccessToast />
         
         {/* File Edit Modal */}
         <EditFileModal />
@@ -6056,11 +6088,21 @@ const DWSSBIMDashboard = () => {
                           Clear
                         </button>
                       )}
-                                             {hasBindingPermission() && (
-                         <button className="p-1 text-gray-600 hover:text-gray-900" title="Add file">
-                            <Plus className="w-4 h-4" />
-                          </button>
-                       )}
+                      {hasBindingPermission() && !isViewOnlyUser() && !isBindingMode && (
+                        <button 
+                          onClick={handleAddFileForSelectedComponents}
+                          disabled={getFinalHighlightSet().length === 0}
+                          className={`flex items-center px-2 py-1 rounded text-xs ${
+                            getFinalHighlightSet().length > 0 
+                              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          }`}
+                          title={getFinalHighlightSet().length === 0 ? "Please select one or more components in the BIM view first" : "Add file for selected components"}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add File
+                        </button>
+                      )}
                     </div>
                   </div>
                   
@@ -6282,6 +6324,19 @@ const DWSSBIMDashboard = () => {
                                 )}
                               </div>
                               <div className="ml-2 flex items-center space-x-1">
+                                {/* File preview button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Here we would show file preview
+                                    alert(`Preview file: ${file.name}`);
+                                  }}
+                                  className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                  title="Preview file"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                
                                 {/* 绑定模式下显示当前选中文件 */}
                                 {isBindingMode && isInCart && (
                                   <div className="text-xs text-green-600 font-medium">
