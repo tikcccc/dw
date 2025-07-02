@@ -4,12 +4,12 @@ import { ModelVersion, Component, RiscForm, FileItem, ActivityLog, User, UserRol
 // HyD Code 选项
 export const hydCodeOptions = {
   project: ['HY202404', 'HY202405'],
-  contractor: ['CSG', 'AECOM', 'HKJV'],
-  location: ['SITE-A', 'SITE-B', 'SITE-C'],
-  structure: ['FOUNDATION', 'FRAME', 'ROOF', 'WALL'],
-  space: ['WC_B8', 'WC_B9', 'WC_C1', 'WC_C2'],
-  grid: ['ST_FD', 'ST_FE', 'ST_GD', 'ST_GE'],
-  cat: ['CONCRETE', 'STEEL', 'TIMBER', 'COMPOSITE']
+  originator: ['CSG', 'AECOM', 'HKJV'],
+  volume: ['SITE-A', 'SITE-B', 'SITE-C'],
+  system: ['FOUNDATION', 'FRAME', 'ROOF', 'WALL'],
+  location: ['WC_B8', 'WC_B9', 'WC_C1', 'WC_C2'],
+  discipline: ['ST_FD', 'ST_FE', 'ST_GD', 'ST_GE'],
+  sequential_number: ['CONCRETE', 'STEEL', 'TIMBER', 'COMPOSITE']
 };
 
 // 模型版本
@@ -27,7 +27,7 @@ export const mockComponents: Component[] = [
     version: 'current', 
     modelVersionId: 'current',
     objectGroup: 'OBJ-GROUP-001',
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     properties: { 
       position: 'Zone A Foundation Area Block 1', 
       material: 'C40 Concrete', 
@@ -41,7 +41,7 @@ export const mockComponents: Component[] = [
     version: 'current', 
     modelVersionId: 'current',
     objectGroup: 'OBJ-GROUP-001',
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     properties: { 
       position: 'Zone A Foundation Area Block 2', 
       material: 'C40 Concrete', 
@@ -55,7 +55,7 @@ export const mockComponents: Component[] = [
     version: 'current', 
     modelVersionId: 'current',
     objectGroup: 'OBJ-GROUP-001',
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     properties: { 
       position: 'Zone A Foundation Area Block 3', 
       material: 'C40 Concrete', 
@@ -70,7 +70,7 @@ export const mockComponents: Component[] = [
     version: 'v1.8', 
     modelVersionId: 'v1.8', // 历史版本ID
     objectGroup: 'OBJ-GROUP-001',
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     properties: { 
       position: 'Zone A Foundation Area Block 1 (Historical)', 
       material: 'C35 Concrete', 
@@ -91,7 +91,7 @@ export const mockRiscForms: RiscForm[] = [
     linkedToCurrent: true, 
     objects: ['F-A-001', 'F-A-002'], 
     createdBy: 'John Doe',
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     boundModelVersionId: 'current'
   },
   { 
@@ -104,7 +104,7 @@ export const mockRiscForms: RiscForm[] = [
     objects: ['F-A-002'],
     createdBy: 'Mike Johnson', 
     changes: ['Component position adjusted', 'Material parameters updated'],
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     boundModelVersionId: 'v1.8'
   }
 ];
@@ -121,7 +121,7 @@ export const mockFiles: FileItem[] = [
     uploadedBy: 'John Doe', 
     linkedToCurrent: true, 
     objects: ['F-A-001', 'F-A-002'],
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     boundModelVersionId: 'current'
   },
   { 
@@ -135,7 +135,7 @@ export const mockFiles: FileItem[] = [
     linkedToCurrent: true,
     objects: ['F-A-001'],
     changes: ['Component position adjusted', 'Geometric shape optimized'],
-    hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+    hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
     boundModelVersionId: 'v1.8'
   }
 ];

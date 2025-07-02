@@ -2,12 +2,12 @@
 
 export interface HydCode {
   project: string;
-  contractor: string;
+  originator: string;
+  volume: string;
+  system: string;
   location: string;
-  structure: string;
-  space: string;
-  grid: string;
-  cat: string;
+  discipline: string;
+  sequential_number: string;
 }
 
 export interface Component {

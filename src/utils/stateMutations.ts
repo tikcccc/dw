@@ -30,12 +30,12 @@ export class StateMutations {
   ): void {
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     // When manually clearing HyD Code filters, clear the filter highlight set but keep the manual highlight set
     setFilterHighlightSet([]);
@@ -57,12 +57,12 @@ export class StateMutations {
     // Clear all filter conditions
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     setRiscFilters({
       status: '',
@@ -163,12 +163,12 @@ export class StateMutations {
     // Clear HyD Code filter (if any)
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     // Clear selection states
     setSelectedRISC(null);
