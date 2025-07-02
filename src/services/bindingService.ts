@@ -5,7 +5,6 @@ export class BindingService {
   // 添加文件到绑定购物车
   static addToBindingCart(
     item: FileItem,
-    type: string,
     bindingCart: BindingCart,
     setBindingCart: (cart: BindingCart) => void,
     currentUser: string

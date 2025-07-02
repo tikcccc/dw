@@ -1,5 +1,5 @@
 // 模拟数据
-import { HydCode, ModelVersion, Component, RiscForm, FileItem, ActivityLog, User } from '../types';
+import { ModelVersion, Component, RiscForm, FileItem, ActivityLog, User, UserRole } from '../types';
 
 // HyD Code 选项
 export const hydCodeOptions = {
@@ -168,9 +168,9 @@ export const mockActivityLogs: ActivityLog[] = [
 
 // 示例用户数据
 export const mockUsers: User[] = [
-  { id: 1, name: 'John Doe', email: 'john.doe@example.com', role: 'Authorized User', lastLogin: '2025-03-08 09:15' },
-  { id: 2, name: 'Jane Smith', email: 'jane.smith@example.com', role: 'Authorized User', lastLogin: '2025-03-08 08:30' },
-  { id: 3, name: 'Mike Johnson', email: 'mike.johnson@example.com', role: 'View-only User', lastLogin: '2025-03-07 16:45' },
-  { id: 4, name: 'Sarah Wilson', email: 'sarah.wilson@example.com', role: 'Authorized User', lastLogin: '2025-03-05 14:20' },
-  { id: 5, name: 'Tom Chen', email: 'tom.chen@example.com', role: 'Admin', lastLogin: '2025-03-08 10:00' }
+  { id: 1, name: 'John Doe', email: 'john.doe@example.com', role: UserRole.AUTHORIZED_USER, lastLogin: '2025-03-08 09:15' },
+  { id: 2, name: 'Jane Smith', email: 'jane.smith@example.com', role: UserRole.AUTHORIZED_USER, lastLogin: '2025-03-08 08:30' },
+  { id: 3, name: 'Mike Johnson', email: 'mike.johnson@example.com', role: UserRole.VIEW_ONLY_USER, lastLogin: '2025-03-07 16:45' },
+  { id: 4, name: 'Sarah Wilson', email: 'sarah.wilson@example.com', role: UserRole.AUTHORIZED_USER, lastLogin: '2025-03-05 14:20' },
+  { id: 5, name: 'Tom Chen', email: 'tom.chen@example.com', role: UserRole.ADMINISTRATOR, lastLogin: '2025-03-08 10:00' }
 ]; 

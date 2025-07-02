@@ -271,11 +271,9 @@ export const RightFilePanel: React.FC<RightFilePanelProps> = ({
                   // 绑定模式下，将绑定购物车中的文件排在最前面
                   if (isBindingMode && bindingCart.files.length > 0) {
                     const bindingFileIds = new Set(bindingCart.files.map(f => f.id));
-                    const bindingFiles = filteredFiles.filter(file => bindingFileIds.has(file.id));
-                    const otherFiles = filteredFiles.filter(file => !bindingFileIds.has(file.id));
-                    
                     // 确保绑定文件始终显示，即使不在过滤列表中
                     const allBindingFiles = bindingCart.files;
+                    const otherFiles = filteredFiles.filter(file => !bindingFileIds.has(file.id));
                     const sortedFiles = [...allBindingFiles, ...otherFiles.filter(file => !bindingFileIds.has(file.id))];
                     
                     if (sortedFiles.length > 0) {

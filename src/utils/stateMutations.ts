@@ -1,5 +1,5 @@
 // State Mutation Utility Functions
-import { HydCode, RiscFilters, FileFilters } from '../types';
+import { HydCode, RiscFilters } from '../types';
 
 export class StateMutations {
   // Clear all RISC filters
