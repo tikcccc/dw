@@ -1,5 +1,5 @@
 ﻿// @ts-nocheck
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDown, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ChevronRight, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
 import userGuideContent from '../USER_GUIDE.md?raw';
 
@@ -681,7 +681,7 @@ const DWSSBIMDashboard = () => {
 
   // Handle adding file for selected components
   const handleAddFileForSelectedComponents = (): void => {
-    const finalHighlightSet = getFinalHighlightSet();
+    const finalHighlightSet = getFinalHighlightSet;
     
     // Check if any components are highlighted
     if (finalHighlightSet.length === 0) {
@@ -719,10 +719,10 @@ const DWSSBIMDashboard = () => {
   };
 
   // Calculate final highlight set (Final Highlight Set = Filter Highlight Set ∪ Manual Highlight Set)
-  const getFinalHighlightSet = () => {
+  const getFinalHighlightSet = useMemo(() => {
     const finalSet = [...new Set([...filterHighlightSet, ...manualHighlightSet])];
     return finalSet;
-  };
+  }, [filterHighlightSet, manualHighlightSet]);
 
   // Check if HyD Code filter is active - Updated to support historical view
   const hasHydCodeFilter = () => {
@@ -918,13 +918,18 @@ const DWSSBIMDashboard = () => {
       return true;
     });
 
-    // Object association filtering - Highlighted component priority logic (same logic for binding mode and normal mode)
-    const finalHighlightSet = getFinalHighlightSet();
+    // Object association filtering - Blue highlight priority logic
+    const finalHighlightSet = getFinalHighlightSet;
     
     if (hasHydCodeFilter()) {
       // Case: HyD Code filter is active
-      if (finalHighlightSet.length > 0) {
-        // Highest priority for highlighted components: show items related to any highlighted component, even if outside HyD Code range
+      if (manualHighlightSet.length > 0) {
+        // Highest priority: when blue highlights exist, show only items related to blue highlighted components
+        filtered = filtered.filter(form => 
+          form.objects.some(objId => manualHighlightSet.includes(objId))
+        );
+      } else if (finalHighlightSet.length > 0) {
+        // Secondary priority: show items related to any highlighted component (yellow highlights from HyD filter)
         filtered = filtered.filter(form => 
           form.objects.some(objId => finalHighlightSet.includes(objId))
         );
@@ -1001,13 +1006,18 @@ const DWSSBIMDashboard = () => {
       return true;
     });
 
-    // Object association filtering - Highlighted component priority logic (same logic for binding mode and normal mode)
-    const finalHighlightSet = getFinalHighlightSet();
+    // Object association filtering - Blue highlight priority logic
+    const finalHighlightSet = getFinalHighlightSet;
     
     if (hasHydCodeFilter()) {
       // Case: HyD Code filter is active
-      if (finalHighlightSet.length > 0) {
-        // Highest priority for highlighted components: show items related to any highlighted component, even if outside HyD Code range
+      if (manualHighlightSet.length > 0) {
+        // Highest priority: when blue highlights exist, show only items related to blue highlighted components
+        filtered = filtered.filter(file => 
+          file.objects.some(objId => manualHighlightSet.includes(objId))
+        );
+      } else if (finalHighlightSet.length > 0) {
+        // Secondary priority: show items related to any highlighted component (yellow highlights from HyD filter)
         filtered = filtered.filter(file => 
           file.objects.some(objId => finalHighlightSet.includes(objId))
         );
@@ -3330,7 +3340,7 @@ const DWSSBIMDashboard = () => {
     // 暂时隐藏按钮，避免用户重复点击
     setShowAddAllHighlightedButton(false);
     
-    const finalHighlightSet = getFinalHighlightSet();
+    const finalHighlightSet = getFinalHighlightSet;
     if (finalHighlightSet.length === 0) {
       alert('没有高亮的构件可以添加。请先选择或筛选构件。');
       // 恢复按钮显示
@@ -3797,7 +3807,7 @@ const DWSSBIMDashboard = () => {
                           <ul className="divide-y divide-gray-100">
                             {components.map(component => {
                               // 获取各种状态
-                              const finalHighlightSet = getFinalHighlightSet();
+                              const finalHighlightSet = getFinalHighlightSet;
                               const isInFinalSet = finalHighlightSet.includes(component.id);
                               const isInCart = bindingCart.objects.find(o => o.id === component.id);
                               
@@ -3886,7 +3896,7 @@ const DWSSBIMDashboard = () => {
           componentsForFiles = treeWhiteComponents;
         }
       } else {
-        const highlightedComponents = getFinalHighlightSet();
+        const highlightedComponents = getFinalHighlightSet;
         if (contextMenu.componentId && !highlightedComponents.includes(contextMenu.componentId)) {
           componentsForFiles = [...highlightedComponents, contextMenu.componentId];
         } else {
@@ -3918,7 +3928,7 @@ const DWSSBIMDashboard = () => {
         }
       } else {
         // 来自其他地方的右键点击 - 使用原有逻辑
-        const highlightedComponents = getFinalHighlightSet();
+        const highlightedComponents = getFinalHighlightSet;
         if (contextMenu.componentId) {
           const component = components.find(c => c.id === contextMenu.componentId);
           if (component) {
@@ -5779,7 +5789,7 @@ const DWSSBIMDashboard = () => {
                                   } ${
                                     // 悬浮效果：根据当前是否有持续高亮来决定颜色
                                     hoveredItem?.id === form.id 
-                                      ? (getFinalHighlightSet().length > 0 && (selectedRISC !== null || selectedFile !== null))
+                                      ? (getFinalHighlightSet.length > 0 && (selectedRISC !== null || selectedFile !== null))
                                         ? 'ring-2 ring-yellow-400 bg-yellow-50' // 情况二：有持续高亮时悬浮显示黄色
                                         : 'ring-2 ring-blue-400 bg-blue-50'     // 情况一：无持续高亮时悬浮显示蓝色
                                       : ''
@@ -5889,14 +5899,14 @@ const DWSSBIMDashboard = () => {
                       </div>
                       
                       {/* 绑定模式下的批量添加按钮 */}
-                      {isBindingMode && getFinalHighlightSet().length > 0 && showAddAllHighlightedButton && (
+                      {isBindingMode && getFinalHighlightSet.length > 0 && showAddAllHighlightedButton && (
                         <div className="mb-4 flex justify-center">
                           <button
                             onClick={addAllHighlightedToCart}
                             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center font-medium shadow-md transition-all"
                           >
                             <Plus className="w-4 h-4 mr-2" />
-                            Add all highlighted components to binding ({getFinalHighlightSet().length})
+                            Add all highlighted components to binding ({getFinalHighlightSet.length})
                           </button>
                         </div>
                       )}
@@ -5912,7 +5922,7 @@ const DWSSBIMDashboard = () => {
                       )}
                       
                       {/* 绑定模式下但没有高亮构件时的提示 */}
-                      {isBindingMode && getFinalHighlightSet().length === 0 && showAddAllHighlightedButton && (
+                      {isBindingMode && getFinalHighlightSet.length === 0 && showAddAllHighlightedButton && (
                         <div className="mb-4 flex justify-center">
                           <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg flex items-center font-medium">
                             <Info className="w-4 h-4 mr-2" />
@@ -5933,7 +5943,7 @@ const DWSSBIMDashboard = () => {
                       >
                         {getFilteredObjectGroups().map(component => {
                           // 获取各种状态
-                          const finalHighlightSet = getFinalHighlightSet();
+                          const finalHighlightSet = getFinalHighlightSet;
                           const isInFinalSet = finalHighlightSet.includes(component.id);
                           const isInFilterSet = filterHighlightSet.includes(component.id);
                           const isInManualSet = manualHighlightSet.includes(component.id);
@@ -6014,19 +6024,19 @@ const DWSSBIMDashboard = () => {
                         )}
                       </div>
                       
-                      {getFinalHighlightSet().length > 0 && (
+                      {getFinalHighlightSet.length > 0 && (
                         <div className="text-xs text-blue-600 mt-2 font-medium">
-                          Final highlighted set: {getFinalHighlightSet().length} components
+                          Final highlighted set: {getFinalHighlightSet.length} components
                         </div>
                       )}
                       {hoveredObjects.length > 0 && (
                         <div className={`text-xs mt-2 font-medium ${
-                          getFinalHighlightSet().length === 0
+                          getFinalHighlightSet.length === 0
                             ? 'text-blue-600' 
                             : 'text-yellow-600'
                         }`}>
                           Hover preview: {hoveredObjects.length} components {
-                            getFinalHighlightSet().length === 0
+                            getFinalHighlightSet.length === 0
                               ? '(blue)' 
                               : '(yellow overlay)'
                           }
@@ -6132,13 +6142,13 @@ const DWSSBIMDashboard = () => {
                       {hasBindingPermission() && !isViewOnlyUser() && !isBindingMode && (
                         <button 
                           onClick={handleAddFileForSelectedComponents}
-                          disabled={getFinalHighlightSet().length === 0}
+                          disabled={getFinalHighlightSet.length === 0}
                           className={`flex items-center px-2 py-1 rounded text-xs ${
-                            getFinalHighlightSet().length > 0 
+                            getFinalHighlightSet.length > 0 
                               ? 'bg-blue-600 text-white hover:bg-blue-700' 
                               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           }`}
-                          title={getFinalHighlightSet().length === 0 ? "Please select one or more components in the BIM view first" : "Add file for selected components"}
+                          title={getFinalHighlightSet.length === 0 ? "Please select one or more components in the BIM view first" : "Add file for selected components"}
                         >
                           <Plus className="w-3 h-3 mr-1" />
                           Add File
@@ -6288,7 +6298,7 @@ const DWSSBIMDashboard = () => {
                             } ${
                               // 悬浮效果：根据当前是否有持续高亮来决定颜色
                               hoveredItem?.id === file.id 
-                                ? (getFinalHighlightSet().length > 0 && (selectedRISC !== null || selectedFile !== null))
+                                ? (getFinalHighlightSet.length > 0 && (selectedRISC !== null || selectedFile !== null))
                                   ? 'ring-2 ring-yellow-400 bg-yellow-50' // 情况二：有持续高亮时悬浮显示黄色
                                   : 'ring-2 ring-blue-400 bg-blue-50'     // 情况一：无持续高亮时悬浮显示蓝色
                                 : ''

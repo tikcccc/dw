@@ -11,10 +11,11 @@ DWSS-BIM is a React-based Building Information Modeling (BIM) dashboard applicat
 This is a React 18 + TypeScript + Vite project using Tailwind CSS for styling. The project is now fully configured with all necessary build tools and dependencies.
 
 ### Development Commands
-- `npm run dev` - Start development server on http://localhost:3000
+- `npm run dev` - Start development server on http://localhost:3000 (opens automatically)
 - `npm run build` - Build for production (TypeScript compilation + Vite build)
 - `npm run lint` - Run ESLint with TypeScript support
 - `npm run preview` - Preview production build locally
+- `npm run deploy` - Build and deploy to GitHub Pages (manual deployment)
 
 ### Tech Stack
 - **Build Tool**: Vite 5.0+ with React plugin
@@ -91,8 +92,10 @@ The dashboard maintains several coordinated state variables:
 ### Code Quality and Development Notes
 - Main dashboard file (DWSSBIMDashboard.tsx) uses @ts-nocheck directive due to size/complexity
 - ESLint configured with TypeScript support and React hooks rules
+- TypeScript configured with strict mode and additional linting rules (noUnusedLocals, noUnusedParameters)
 - Error boundary component included for robust error handling
 - Vite configuration includes markdown file support for USER_GUIDE.md import
+- Vite server configured to auto-open browser and use port 3000
 - No test framework configured - tests would need to be added separately
 
 ## Common Operations
@@ -127,7 +130,7 @@ The dashboard maintains several coordinated state variables:
 - All TypeScript types are centralized in `src/types/index.ts`
 
 ### Configuration Files
-- **vite.config.ts** - Vite bundler configuration with React plugin and markdown support
+- **vite.config.ts** - Vite bundler configuration with React plugin, markdown support, port 3000, and relative base path
 - **tailwind.config.js** - Tailwind CSS configuration
-- **tsconfig.json** - TypeScript configuration with strict mode
-- **package.json** - Dependencies and build scripts
+- **tsconfig.json** - TypeScript configuration with strict mode and advanced linting
+- **package.json** - Dependencies and build scripts including GitHub Pages deployment
