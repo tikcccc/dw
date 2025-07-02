@@ -681,24 +681,25 @@ const DWSSBIMDashboard = () => {
 
   // Handle adding file for selected components
   const handleAddFileForSelectedComponents = (): void => {
-    const finalHighlightSet = getFinalHighlightSet;
+    // 只使用蓝色构件（手动选择的构件）
+    const blueHighlightSet = manualHighlightSet;
     
-    // Check if any components are highlighted
-    if (finalHighlightSet.length === 0) {
+    // Check if any blue components are highlighted
+    if (blueHighlightSet.length === 0) {
       return; // Button should be disabled in this case
     }
     
     // Show confirmation dialog with the specified format
     const confirmResult = confirm(
       `确认文件关联\n\n` +
-      `您已选择了 ${finalHighlightSet.length} 个BIM构件。\n\n` +
+      `您已选择了 ${blueHighlightSet.length} 个BIM构件。\n\n` +
       `是否立即从ACC平台添加新文件，并与这些构件建立关联？\n\n` +
       `点击确认后，将跳转至文件管理页面并自动开始添加流程。`
     );
     
     if (confirmResult) {
       // Store the selected component IDs for use in the file management page
-      setSelectedComponentsForFiles(finalHighlightSet);
+      setSelectedComponentsForFiles(blueHighlightSet);
       
       // Navigate to file management page
       setShowFileManagement(true);
@@ -3896,12 +3897,8 @@ const DWSSBIMDashboard = () => {
           componentsForFiles = treeWhiteComponents;
         }
       } else {
-        const highlightedComponents = getFinalHighlightSet;
-        if (contextMenu.componentId && !highlightedComponents.includes(contextMenu.componentId)) {
-          componentsForFiles = [...highlightedComponents, contextMenu.componentId];
-        } else {
-          componentsForFiles = highlightedComponents;
-        }
+        // 来自BIM视图的右键点击 - 只使用蓝色构件
+        componentsForFiles = manualHighlightSet;
       }
       
       setSelectedComponentsForFiles(componentsForFiles);
@@ -3948,9 +3945,14 @@ const DWSSBIMDashboard = () => {
       setContextMenu({...contextMenu, visible: false});
     };
 
-    // 判断是否显示管理关联文件选项（只对白色条目显示） 
+    // 判断是否显示管理关联文件选项（只对蓝色构件显示） 
     const shouldShowFileManagement = () => {
-      if (!contextMenu.isFromTree) return !isViewOnlyUser() && !isBindingMode;
+      if (isViewOnlyUser() || isBindingMode) return false;
+      
+      if (!contextMenu.isFromTree) {
+        // 来自BIM视图的右键点击 - 只有蓝色构件可以显示
+        return contextMenu.componentId && manualHighlightSet.includes(contextMenu.componentId);
+      }
       
       if (treeShowAllWhite) return !isViewOnlyUser() && !isBindingMode;
       
@@ -6142,13 +6144,13 @@ const DWSSBIMDashboard = () => {
                       {hasBindingPermission() && !isViewOnlyUser() && !isBindingMode && (
                         <button 
                           onClick={handleAddFileForSelectedComponents}
-                          disabled={getFinalHighlightSet.length === 0}
+                          disabled={manualHighlightSet.length === 0}
                           className={`flex items-center px-2 py-1 rounded text-xs ${
-                            getFinalHighlightSet.length > 0 
+                            manualHighlightSet.length > 0 
                               ? 'bg-blue-600 text-white hover:bg-blue-700' 
                               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           }`}
-                          title={getFinalHighlightSet.length === 0 ? "Please select one or more components in the BIM view first" : "Add file for selected components"}
+                          title={manualHighlightSet.length === 0 ? "Please select one or more blue components in the BIM view first" : "Add file for selected blue components"}
                         >
                           <Plus className="w-3 h-3 mr-1" />
                           Add File
