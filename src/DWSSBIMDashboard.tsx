@@ -1142,6 +1142,7 @@ const DWSSBIMDashboard = () => {
       setFilterHighlightSet(filteredComponents);
       
       // 清除手动高亮集合，因为我们希望用户看到筛选结果
+      // 这确保了筛选出的构件只会显示黄色高光，而不会被添加到manualHighlightSet中
       setManualHighlightSet([]);
     } else {
       // 如果没有应用筛选，清除筛选高亮集合
@@ -1188,6 +1189,22 @@ const DWSSBIMDashboard = () => {
       // Get components related to the clicked item
       const itemComponentIds = item.objects || [];
       
+      // 检查是否已经选择了这个条目
+      const isItemSelected = (type === 'risc' && selectedRISC === item.id) || 
+                            (type === 'file' && selectedFile === item.id);
+      
+      // 如果已经选择了这个条目，再次点击时取消选择
+      if (isItemSelected) {
+        // 清除选择状态
+        setSelectedRISC(null);
+        setSelectedFile(null);
+        
+        // 清除手动高亮集合，让筛选高亮集合（黄色）生效
+        setManualHighlightSet([]);
+        return;
+      }
+      
+      // 首次点击条目的逻辑
       // Check if all item components are within the filtered scope
       const itemComponentsInFilter = itemComponentIds.filter(id => 
         filteredComponentIds.includes(id)
@@ -1421,12 +1438,11 @@ const DWSSBIMDashboard = () => {
     
     // Check if in HyD Code filtering mode
     if (hasHydCodeFilter()) {
-      const finalHighlightSet = getFinalHighlightSet();
-      const isComponentInFinalSet = finalHighlightSet.includes(component.id);
+      const isComponentInFilterSet = filterHighlightSet.includes(component.id);
       const isComponentInManualSet = manualHighlightSet.includes(component.id);
       
       if (isComponentInManualSet) {
-        // 如果构件已在手动高亮集合中，点击时移除（取消蓝色高亮）
+        // 如果构件已在手动高亮集合中，点击时移除（取消蓝色高亮，如果在筛选集合中则恢复为黄色高亮）
         const newManualHighlightSet = manualHighlightSet.filter(id => id !== component.id);
         setManualHighlightSet(newManualHighlightSet);
         
@@ -5929,25 +5945,34 @@ const DWSSBIMDashboard = () => {
                           let borderClass = '';
                           let scaleClass = '';
                           
-                          // 黄色悬浮效果 - 最高优先级，当有高亮构件存在时悬浮显示黄色
-                          if (isHovered && finalHighlightSet.length > 0) {
-                            colorClass = 'bg-yellow-400 text-white shadow-xl';
-                            borderClass = 'border-yellow-500';
-                            scaleClass = 'transform scale-115 z-10';
+                          // 1. 悬浮高光 - 最高优先级
+                          if (isHovered) {
+                            // 当视图中存在任何持续高亮时：悬浮显示黄色临时高亮
+                            if (finalHighlightSet.length > 0) {
+                              colorClass = 'bg-yellow-400 text-gray-800 shadow-xl';
+                              borderClass = 'border-yellow-500';
+                              scaleClass = 'transform scale-115 z-10';
+                            }
+                            // 当视图中无任何持续高亮时：悬浮显示蓝色临时高亮
+                            else {
+                              colorClass = 'bg-blue-400 text-white shadow-xl';
+                              borderClass = 'border-blue-500';
+                              scaleClass = 'transform scale-115 z-10';
+                            }
                           }
-                          // 蓝色悬浮效果 - 无持续高亮时的悬浮
-                          else if (isHovered && finalHighlightSet.length === 0) {
-                            colorClass = 'bg-blue-400 text-white shadow-xl';
-                            borderClass = 'border-blue-500';
-                            scaleClass = 'transform scale-115 z-10';
-                          }
-                          // 蓝色持续高光 - 最终高亮集中的构件
-                          else if (isInFinalSet) {
+                          // 2. 蓝色持续高光 - 第二优先级（手动选择的构件或绑定购物车中的构件）
+                          else if (isInManualSet || isInCart) {
                             colorClass = 'bg-blue-500 text-white shadow-lg';
                             borderClass = 'border-blue-600';
                             scaleClass = 'transform scale-110';
                           }
-                          // 默认状态
+                          // 3. HyD Code筛选的黄色高光 - 第三优先级（仅当未被手动选择时显示）
+                          else if (hasHydCodeFilter() && isInFilterSet) {
+                            colorClass = 'bg-yellow-200 text-gray-800 shadow-md';
+                            borderClass = 'border-yellow-300';
+                            scaleClass = 'transform scale-103';
+                          }
+                          // 4. 默认状态 - 最低优先级
                           else {
                             colorClass = 'bg-white bg-opacity-90 text-gray-700';
                             borderClass = 'border-gray-300';

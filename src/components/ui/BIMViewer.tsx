@@ -47,7 +47,7 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
   files = []
 }) => {
   const getComponentColorClasses = (component: Component) => {
-    const isInFinalSet = finalHighlightSet.includes(component.id);
+    const isInManualSet = manualHighlightSet.includes(component.id);
     const isHovered = hoveredObjects.includes(component.id);
     const isInCart = bindingCart.objects.find(o => o.id === component.id);
     const isInHydCodeFilter = hasHydCodeFilter && filterHighlightSet.includes(component.id);
@@ -81,7 +81,7 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
       }
     }
     // 2. 蓝色持续高光 - 第二优先级（手动选择的构件或绑定购物车中的构件）
-    else if (isInFinalSet || isInCart) {
+    else if (isInManualSet || isInCart) {
       colorClass = 'bg-blue-500 text-white shadow-lg';
       borderClass = 'border-blue-600';
       scaleClass = 'transform scale-105';
