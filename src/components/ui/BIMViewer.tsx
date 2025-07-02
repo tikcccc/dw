@@ -80,13 +80,13 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
         }
       }
     }
-    // 2. 蓝色持续高光 - 第二优先级（最终高亮集或绑定购物车中的构件）
+    // 2. 蓝色持续高光 - 第二优先级（手动选择的构件或绑定购物车中的构件）
     else if (isInFinalSet || isInCart) {
       colorClass = 'bg-blue-500 text-white shadow-lg';
       borderClass = 'border-blue-600';
       scaleClass = 'transform scale-105';
     }
-    // 3. HyD Code筛选的黄色高光 - 第三优先级
+    // 3. HyD Code筛选的黄色高光 - 第三优先级（仅当未被手动选择时显示）
     else if (isInHydCodeFilter) {
       colorClass = 'bg-yellow-200 text-gray-800 shadow-md';
       borderClass = 'border-yellow-300';
