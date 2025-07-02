@@ -50,6 +50,7 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
     const isInFinalSet = finalHighlightSet.includes(component.id);
     const isHovered = hoveredObjects.includes(component.id);
     const isInCart = bindingCart.objects.find(o => o.id === component.id);
+    const isInHydCodeFilter = hasHydCodeFilter && filterHighlightSet.includes(component.id);
     
     let colorClass = '';
     let borderClass = '';
@@ -85,7 +86,13 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
       borderClass = 'border-blue-600';
       scaleClass = 'transform scale-105';
     }
-    // 3. 默认状态 - 最低优先级
+    // 3. HyD Code筛选的黄色高光 - 第三优先级
+    else if (isInHydCodeFilter) {
+      colorClass = 'bg-yellow-200 text-gray-800 shadow-md';
+      borderClass = 'border-yellow-300';
+      scaleClass = 'transform scale-103';
+    }
+    // 4. 默认状态 - 最低优先级
     else {
       colorClass = 'bg-white bg-opacity-90 text-gray-700 hover:bg-opacity-100';
       borderClass = 'border-gray-300 hover:border-gray-400';

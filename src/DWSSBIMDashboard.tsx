@@ -49,12 +49,12 @@ class ErrorBoundaryComponent extends React.Component {
 // Define interfaces
 interface HydCode {
   project: string;
-  contractor: string;
+  originator: string;
+  volume: string;
+  system: string;
   location: string;
-  structure: string;
-  space: string;
-  grid: string;
-  cat: string;
+  discipline: string;
+  sequential_number: string;
 }
 
 interface Component {
@@ -263,12 +263,12 @@ const DWSSBIMDashboard = () => {
   // Filter conditions
   const [hydCodeFilter, setHydCodeFilter] = useState({
     project: 'HY202404',
-    contractor: '',
+    originator: '',
+    volume: '',
+    system: '',
     location: '',
-    structure: '',
-    space: '',
-    grid: '',
-    cat: ''
+    discipline: '',
+    sequential_number: ''
   });
   
   const [riscFilters, setRiscFilters] = useState({
@@ -303,7 +303,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-001',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Zone A Foundation Area Block 1', 
         material: 'C40 Concrete', 
@@ -317,7 +317,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-001',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Zone A Foundation Area Block 2', 
         material: 'C40 Concrete', 
@@ -331,7 +331,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-001',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Zone A Foundation Area Block 3', 
         material: 'C40 Concrete', 
@@ -346,7 +346,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-002',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Grid B-12 Column Base', 
         material: 'C45 Concrete', 
@@ -360,7 +360,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-002',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Grid B-12 Column Main', 
         material: 'C45 Concrete', 
@@ -374,7 +374,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-002',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Grid B-12 Column Cap', 
         material: 'C45 Concrete', 
@@ -389,7 +389,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-003',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B9', grid: 'ST_FE', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B9', discipline: 'ST_FE', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Level 3 Beam Network Segment 1', 
         material: 'C40 Concrete', 
@@ -403,7 +403,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-003',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B9', grid: 'ST_FE', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B9', discipline: 'ST_FE', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Level 3 Beam Network Segment 2', 
         material: 'C40 Concrete', 
@@ -417,7 +417,7 @@ const DWSSBIMDashboard = () => {
       version: 'current', 
       modelVersionId: 'current',
       objectGroup: 'OBJ-GROUP-003',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B9', grid: 'ST_FE', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '15.2m³', system: 'FRAME', location: 'WC_B9', discipline: 'ST_FE', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Level 3 Beam Network Segment 3', 
         material: 'C40 Concrete', 
@@ -432,7 +432,7 @@ const DWSSBIMDashboard = () => {
       version: 'v1.8', 
       modelVersionId: 'v1.8', // Historical version ID
       objectGroup: 'OBJ-GROUP-001',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '19.1m³', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Zone A Foundation Area Block 1 (Historical)', 
         material: 'C35 Concrete', 
@@ -446,7 +446,7 @@ const DWSSBIMDashboard = () => {
       version: 'v1.8', 
       modelVersionId: 'v1.8', // Historical version ID
       objectGroup: 'OBJ-GROUP-001',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '19.1m³', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       properties: { 
         position: 'Zone A Foundation Area Block 2 (Historical)', 
         material: 'C35 Concrete', 
@@ -465,7 +465,7 @@ const DWSSBIMDashboard = () => {
       objects: ['TEMP-COL-B-999'], // Temporary column component, deleted in latest version
       createdBy: 'Sarah Wilson',
       changes: ['Temporary column component deleted', 'Component removed due to design optimization', 'RISC form archived and saved'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_C2', grid: 'ST_GE', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_C2', discipline: 'ST_GE', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     }
   ]);
@@ -480,7 +480,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: true, 
       objects: ['F-A-001', 'F-A-002', 'COL-B-012-BASE', 'COL-B-012-MAIN'], 
       createdBy: 'John Doe',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -492,7 +492,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: true, 
       objects: ['COL-B-012-MAIN', 'COL-B-012-CAP'], 
       createdBy: 'Jane Smith',
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -505,7 +505,7 @@ const DWSSBIMDashboard = () => {
       objects: ['F-A-002'], // Associated with current component
       createdBy: 'Mike Johnson', 
       changes: ['Component position adjusted', 'Material parameters updated'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     }
   ]);
@@ -521,7 +521,7 @@ const DWSSBIMDashboard = () => {
       uploadedBy: 'John Doe', 
       linkedToCurrent: true, 
       objects: ['F-A-001', 'F-A-002', 'COL-B-012-BASE'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -534,7 +534,7 @@ const DWSSBIMDashboard = () => {
       uploadedBy: 'Jane Smith', 
       linkedToCurrent: true, 
       objects: ['BEAM-C-025-01', 'BEAM-C-025-02', 'BEAM-C-025-03'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B9', grid: 'ST_FE', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_B9', discipline: 'ST_FE', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -548,7 +548,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: true, // Changed to true for testing floating panel functionality
       objects: ['F-A-001'], // Associated with current component
       changes: ['Component position adjusted', 'Geometric shape optimized'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     },
     { 
@@ -561,7 +561,7 @@ const DWSSBIMDashboard = () => {
       uploadedBy: 'Administrator', 
       linkedToCurrent: true, 
       objects: ['F-A-001', 'F-A-003'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -574,7 +574,7 @@ const DWSSBIMDashboard = () => {
       uploadedBy: 'Administrator', 
       linkedToCurrent: true, 
       objects: ['COL-B-012-BASE', 'COL-B-012-MAIN'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'current'
     },
     { 
@@ -588,7 +588,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: false, 
       objects: ['DEL-COMP-001', 'DEL-COMP-002'], // Originally bound components, but deleted in latest version
       changes: ['Component deleted from latest version', 'Original associated components: DEL-COMP-001, DEL-COMP-002'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_B8', grid: 'ST_FD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     },
     { 
@@ -602,7 +602,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: false, 
       objects: ['OLD-STEEL-BEAM-001'], // Originally bound steel beam component, but deleted in latest version
       changes: ['Component deleted from latest version', 'Original associated steel beam component removed in design modification'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FRAME', space: 'WC_B9', grid: 'ST_FE', cat: 'STEEL' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_B9', discipline: 'ST_FE', sequential_number: 'STEEL' },
       boundModelVersionId: 'v1.8'
     },
     // Example of deleted item
@@ -617,7 +617,7 @@ const DWSSBIMDashboard = () => {
       linkedToCurrent: false, 
       objects: ['TEMP-FOUND-101', 'TEMP-FOUND-102'], // Temporary foundation components, deleted in latest version
       changes: ['Temporary foundation components deleted', 'Components removed due to design change', 'Related inspection report archived'],
-      hydCode: { project: 'HY202404', contractor: 'CSG', location: 'SITE-A', structure: 'FOUNDATION', space: 'WC_C1', grid: 'ST_GD', cat: 'CONCRETE' },
+      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_C1', discipline: 'ST_GD', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     }
   ]);
@@ -666,12 +666,12 @@ const DWSSBIMDashboard = () => {
   // HyD Code filter options
   const hydCodeOptions = {
     project: ['HY202404', 'HY202405'],
-    contractor: ['CSG', 'AECOM', 'HKJV'],
-    location: ['SITE-A', 'SITE-B', 'SITE-C'],
-    structure: ['FOUNDATION', 'FRAME', 'ROOF', 'WALL'],
-    space: ['WC_B8', 'WC_B9', 'WC_C1', 'WC_C2'],
-    grid: ['ST_FD', 'ST_FE', 'ST_GD', 'ST_GE'],
-    cat: ['CONCRETE', 'STEEL', 'TIMBER', 'COMPOSITE']
+    originator: ['CSG', 'AECOM', 'HKJV'],
+    volume: ['15.2m³', '19.1m³'],
+    system: ['FOUNDATION', 'FRAME', 'ROOF', 'WALL'],
+    location: ['WC_B8', 'WC_B9', 'WC_C1', 'WC_C2'],
+    discipline: ['ST_FD', 'ST_FE', 'ST_GD', 'ST_GE'],
+    sequential_number: ['CONCRETE', 'STEEL', 'TIMBER', 'COMPOSITE']
   };
 
   // Check if user has binding permission
@@ -758,17 +758,29 @@ const DWSSBIMDashboard = () => {
   };
 
   const clearAllHydCodeFilters = () => {
+    // Clear model tree highlight state
+    clearTreeHighlight();
+    
+    // Reset HyD Code filter to default state
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
+    
     // When manually clearing HyD Code filters, clear the filter highlight set but keep the manual highlight set
     setFilterHighlightSet([]);
+    
+    // Also clear selection states
+    setSelectedRISC(null);
+    setSelectedFile(null);
+    setHoveredObjects([]);
+    setHoveredItem(null);
+    setHoveredItemType(null);
   };
 
   // Clear all user selections - New feature
@@ -776,12 +788,12 @@ const DWSSBIMDashboard = () => {
     // Clear all filter conditions
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     setRiscFilters({
       status: '',
@@ -1118,8 +1130,23 @@ const DWSSBIMDashboard = () => {
       return newHydCodeFilter[key as keyof HydCode] !== '';
     });
     
-    // Clear filter highlight set since filtering now happens at component level
-    setFilterHighlightSet([]);
+    // Update filter highlight set with components that match the HyD Code filter
+    if (hasAnyFilter) {
+      const filteredComponents = components
+        .filter(obj => obj.modelVersionId === selectedModelVersion)
+        .filter(obj => {
+          return Object.keys(newHydCodeFilter).every(key => {
+            if (!newHydCodeFilter[key as keyof HydCode]) return true;
+            return obj.hydCode[key as keyof HydCode] === newHydCodeFilter[key as keyof HydCode];
+          });
+        })
+        .map(obj => obj.id);
+      
+      setFilterHighlightSet(filteredComponents);
+    } else {
+      // Clear filter highlight set if no filter is applied
+      setFilterHighlightSet([]);
+    }
     
     // Clear other states
     setSelectedRISC(null);
@@ -1190,12 +1217,12 @@ const DWSSBIMDashboard = () => {
         // 1. Clear all HyD Code filter states
         setHydCodeFilter({
           project: 'HY202404',
-          contractor: '',
+          originator: '',
+          volume: '',
+          system: '',
           location: '',
-          structure: '',
-          space: '',
-          grid: '',
-          cat: ''
+          discipline: '',
+          sequential_number: ''
         });
         setFilterHighlightSet([]);
         
@@ -1586,12 +1613,12 @@ const DWSSBIMDashboard = () => {
     setFilterHighlightSet([]);
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     
     // Comment out automatic version switching logic - always maintain current version view in binding mode
@@ -3394,12 +3421,12 @@ const DWSSBIMDashboard = () => {
     // 清除HyD Code筛选（如果有的话）
     setHydCodeFilter({
       project: 'HY202404',
-      contractor: '',
+      originator: '',
+      volume: '',
+      system: '',
       location: '',
-      structure: '',
-      space: '',
-      grid: '',
-      cat: ''
+      discipline: '',
+      sequential_number: ''
     });
     
     // 清除选择状态
@@ -4416,12 +4443,12 @@ const DWSSBIMDashboard = () => {
           objects: selectedComponentsForFiles,
           hydCode: {
             project: 'Project A',
-            contractor: 'Contractor B',
-            location: 'Location C',
-            structure: 'Structure D',
-            space: 'Space E',
-            grid: 'Grid F',
-            cat: 'Category G'
+            originator: 'Contractor B',
+            volume: '15.2m³',
+            system: 'Structure D',
+            location: 'Space E',
+            discipline: 'Grid F',
+            sequential_number: 'Category G'
           },
           version: 1
         };
