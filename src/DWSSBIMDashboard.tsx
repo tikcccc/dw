@@ -3966,11 +3966,17 @@ const DWSSBIMDashboard = () => {
       if (isViewOnlyUser() || isBindingMode) return false;
       
       if (!contextMenu.isFromTree) {
-        // 来自BIM视图的右键点击 - 蓝色和黄色构件都可以显示
-        return contextMenu.componentId && (
-          manualHighlightSet.includes(contextMenu.componentId) || 
-          filterHighlightSet.includes(contextMenu.componentId)
-        );
+        // 来自BIM视图的右键点击 - 优先级规则
+        if (!contextMenu.componentId) return false;
+        
+        // 如果同时存在蓝色和黄色高亮构件，只有蓝色高亮构件可以显示菜单
+        if (manualHighlightSet.length > 0 && filterHighlightSet.length > 0) {
+          return manualHighlightSet.includes(contextMenu.componentId);
+        }
+        
+        // 如果只有蓝色或只有黄色高亮构件，则都可以显示
+        return manualHighlightSet.includes(contextMenu.componentId) || 
+               filterHighlightSet.includes(contextMenu.componentId);
       }
       
       if (treeShowAllWhite) return !isViewOnlyUser() && !isBindingMode;
