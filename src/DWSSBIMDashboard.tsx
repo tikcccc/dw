@@ -230,6 +230,7 @@ const DWSSBIMDashboard = () => {
   // File management page state
   const [showFileManagement, setShowFileManagement] = useState(false);
   const [selectedComponentsForFiles, setSelectedComponentsForFiles] = useState<string[]>([]);
+  const [selectedComponentsHighlightType, setSelectedComponentsHighlightType] = useState<'blue' | 'yellow' | 'mixed'>('blue'); // Track highlight type for file management
   
   // Highlight system - Redesigned
   const [filterHighlightSet, setFilterHighlightSet] = useState<string[]>([]); // Filter highlight set
@@ -681,25 +682,32 @@ const DWSSBIMDashboard = () => {
 
   // Handle adding file for selected components
   const handleAddFileForSelectedComponents = (): void => {
-    // 只使用蓝色构件（手动选择的构件）
+    // 优先规则：蓝色高亮（手动选择）优先于黄色高亮（HyD筛选）
     const blueHighlightSet = manualHighlightSet;
+    const yellowHighlightSet = filterHighlightSet;
     
-    // Check if any blue components are highlighted
-    if (blueHighlightSet.length === 0) {
+    // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
+    const selectedComponents = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
+    const highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
+    
+    // Check if any components are highlighted
+    if (selectedComponents.length === 0) {
       return; // Button should be disabled in this case
     }
     
     // Show confirmation dialog with the specified format
+    const highlightTypeText = highlightType === 'blue' ? '蓝色高亮（手动选择）' : '黄色高亮（HyD筛选）';
     const confirmResult = confirm(
       `确认文件关联\n\n` +
-      `您已选择了 ${blueHighlightSet.length} 个BIM构件。\n\n` +
+      `您已选择了 ${selectedComponents.length} 个BIM构件（${highlightTypeText}）。\n\n` +
       `是否立即从ACC平台添加新文件，并与这些构件建立关联？\n\n` +
       `点击确认后，将跳转至文件管理页面并自动开始添加流程。`
     );
     
     if (confirmResult) {
       // Store the selected component IDs for use in the file management page
-      setSelectedComponentsForFiles(blueHighlightSet);
+      setSelectedComponentsForFiles(selectedComponents);
+      setSelectedComponentsHighlightType(highlightType);
       
       // Navigate to file management page
       setShowFileManagement(true);
@@ -3886,6 +3894,7 @@ const DWSSBIMDashboard = () => {
     const handleFileManagement = () => {
       // 获取要管理文件的构件ID列表
       let componentsForFiles: string[] = [];
+      let highlightType: 'blue' | 'yellow' | 'mixed' = 'blue';
       
       if (contextMenu.isFromTree) {
         // 来自模型树的右键点击 - 使用白色显示的构件
@@ -3896,12 +3905,19 @@ const DWSSBIMDashboard = () => {
           // 只管理白色构件的文件
           componentsForFiles = treeWhiteComponents;
         }
+        highlightType = 'mixed'; // 模型树选择被视为混合类型
       } else {
-        // 来自BIM视图的右键点击 - 只使用蓝色构件
-        componentsForFiles = manualHighlightSet;
+        // 来自BIM视图的右键点击 - 使用蓝色/黄色优先级规则
+        const blueHighlightSet = manualHighlightSet;
+        const yellowHighlightSet = filterHighlightSet;
+        
+        // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
+        componentsForFiles = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
+        highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
       }
       
       setSelectedComponentsForFiles(componentsForFiles);
+      setSelectedComponentsHighlightType(highlightType);
       setShowFileManagement(true);
       setContextMenu({...contextMenu, visible: false});
     };
@@ -3945,13 +3961,16 @@ const DWSSBIMDashboard = () => {
       setContextMenu({...contextMenu, visible: false});
     };
 
-    // 判断是否显示管理关联文件选项（只对蓝色构件显示） 
+    // 判断是否显示管理关联文件选项（对蓝色和黄色构件都显示） 
     const shouldShowFileManagement = () => {
       if (isViewOnlyUser() || isBindingMode) return false;
       
       if (!contextMenu.isFromTree) {
-        // 来自BIM视图的右键点击 - 只有蓝色构件可以显示
-        return contextMenu.componentId && manualHighlightSet.includes(contextMenu.componentId);
+        // 来自BIM视图的右键点击 - 蓝色和黄色构件都可以显示
+        return contextMenu.componentId && (
+          manualHighlightSet.includes(contextMenu.componentId) || 
+          filterHighlightSet.includes(contextMenu.componentId)
+        );
       }
       
       if (treeShowAllWhite) return !isViewOnlyUser() && !isBindingMode;
@@ -5217,6 +5236,23 @@ const DWSSBIMDashboard = () => {
             {/* Right side - 30% - Selected Components */}
             <div className="w-[30%] bg-white rounded-lg shadow-sm p-4">
               <h3 className="text-lg font-semibold mb-4 text-gray-800">Selected Components</h3>
+              
+              {/* Highlight Type Indicator */}
+              {selectedComponentsForFiles.length > 0 && (
+                <div className={`mb-4 p-2 rounded-md text-xs font-medium ${
+                  selectedComponentsHighlightType === 'blue' 
+                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                    : selectedComponentsHighlightType === 'yellow'
+                      ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                      : 'bg-gray-100 text-gray-800 border border-gray-200'
+                }`}>
+                  {selectedComponentsHighlightType === 'blue' && '🔵 蓝色高亮（手动选择）'}
+                  {selectedComponentsHighlightType === 'yellow' && '🟡 黄色高亮（HyD筛选）'}
+                  {selectedComponentsHighlightType === 'mixed' && '⚪ 混合选择（模型树）'}
+                  <span className="ml-2">({selectedComponentsForFiles.length} 个构件)</span>
+                </div>
+              )}
+              
               <div className="overflow-y-auto max-h-full">
                 {selectedComponentsForFiles.length > 0 ? (
                   <div className="space-y-2">
@@ -5227,7 +5263,13 @@ const DWSSBIMDashboard = () => {
                       return (
                         <div 
                           key={component.id}
-                          className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:bg-gray-100 transition-colors"
+                          className={`p-3 rounded-md border transition-colors ${
+                            selectedComponentsHighlightType === 'blue'
+                              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                              : selectedComponentsHighlightType === 'yellow'
+                                ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100'
+                                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                          }`}
                         >
                           <div className="text-sm font-medium text-gray-800">
                             {component.name}
@@ -6144,13 +6186,19 @@ const DWSSBIMDashboard = () => {
                       {hasBindingPermission() && !isViewOnlyUser() && !isBindingMode && (
                         <button 
                           onClick={handleAddFileForSelectedComponents}
-                          disabled={manualHighlightSet.length === 0}
+                          disabled={manualHighlightSet.length === 0 && filterHighlightSet.length === 0}
                           className={`flex items-center px-2 py-1 rounded text-xs ${
-                            manualHighlightSet.length > 0 
+                            (manualHighlightSet.length > 0 || filterHighlightSet.length > 0)
                               ? 'bg-blue-600 text-white hover:bg-blue-700' 
                               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           }`}
-                          title={manualHighlightSet.length === 0 ? "Please select one or more blue components in the BIM view first" : "Add file for selected blue components"}
+                          title={
+                            manualHighlightSet.length > 0 
+                              ? `Add file for ${manualHighlightSet.length} blue highlighted components` 
+                              : filterHighlightSet.length > 0 
+                                ? `Add file for ${filterHighlightSet.length} yellow highlighted components (HyD filtered)`
+                                : "Please highlight components in the BIM view first (blue for manual selection or yellow for HyD filtering)"
+                          }
                         >
                           <Plus className="w-3 h-3 mr-1" />
                           Add File
