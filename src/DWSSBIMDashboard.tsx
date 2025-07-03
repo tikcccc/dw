@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDown, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ChevronRight, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
 import userGuideContent from '../USER_GUIDE.md?raw';
+import { HydFilterConfirmModal } from './components/ui/HydFilterConfirmModal';
 
 // Error Boundary Component
 class ErrorBoundaryComponent extends React.Component {
@@ -253,6 +254,28 @@ const DWSSBIMDashboard = () => {
   const [showAdminInviteModal, setShowAdminInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('');
+  
+  // Notification Modal state
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationConfig, setNotificationConfig] = useState({
+    type: 'info', // 'info' | 'success' | 'warning' | 'error' | 'confirm'
+    title: '',
+    message: '',
+    onConfirm: null,
+    onCancel: null,
+    confirmText: '确认',
+    cancelText: '取消',
+    showCancel: false
+  });
+
+  // HyD Filter Confirmation Modal state
+  const [showHydFilterConfirmModal, setShowHydFilterConfirmModal] = useState(false);
+  const [hydFilterConfirmConfig, setHydFilterConfirmConfig] = useState({
+    itemName: '',
+    componentCount: 0,
+    onConfirm: null,
+    itemComponentIds: []
+  });
   
   // Add admin page state
   const [adminSubView, setAdminSubView] = useState('users'); // 'users' | 'logs' | 'fileTypes'
@@ -675,6 +698,50 @@ const DWSSBIMDashboard = () => {
     sequential_number: ['CONCRETE', 'STEEL', 'TIMBER', 'COMPOSITE']
   };
 
+  // Notification helper functions
+  const showNotification = (config) => {
+    setNotificationConfig(config);
+    setShowNotificationModal(true);
+  };
+
+  const showAlert = (title, message, type = 'info') => {
+    showNotification({
+      type,
+      title,
+      message,
+      onConfirm: () => setShowNotificationModal(false),
+      showCancel: false,
+      confirmText: '确认'
+    });
+  };
+
+  const showConfirm = (title, message, onConfirm, onCancel = null) => {
+    showNotification({
+      type: 'confirm',
+      title,
+      message,
+      onConfirm: () => {
+        setShowNotificationModal(false);
+        if (onConfirm) onConfirm();
+      },
+      onCancel: () => {
+        setShowNotificationModal(false);
+        if (onCancel) onCancel();
+      },
+      showCancel: true,
+      confirmText: '确认',
+      cancelText: '取消'
+    });
+  };
+
+  const showSuccess = (title, message) => {
+    showAlert(title, message, 'success');
+  };
+
+  const showError = (title, message) => {
+    showAlert(title, message, 'error');
+  };
+
   // Check if user has binding permission
   const hasBindingPermission = () => {
     return currentUser === 'Administrator' || currentUser === 'John Doe' || currentUser === 'Jane Smith';
@@ -697,24 +764,22 @@ const DWSSBIMDashboard = () => {
     
     // Show confirmation dialog with the specified format
     const highlightTypeText = highlightType === 'blue' ? '蓝色高亮（手动选择）' : '黄色高亮（HyD筛选）';
-    const confirmResult = confirm(
-      `确认文件关联\n\n` +
-      `您已选择了 ${selectedComponents.length} 个BIM构件（${highlightTypeText}）。\n\n` +
-      `是否立即从ACC平台添加新文件，并与这些构件建立关联？\n\n` +
-      `点击确认后，将跳转至文件管理页面并自动开始添加流程。`
-    );
     
-    if (confirmResult) {
-      // Store the selected component IDs for use in the file management page
-      setSelectedComponentsForFiles(selectedComponents);
-      setSelectedComponentsHighlightType(highlightType);
-      
-      // Navigate to file management page
-      setShowFileManagement(true);
-      
-      // Set a flag to automatically open the upload modal when the page loads
-      setAutoOpenUploadModal(true);
-    }
+    showConfirm(
+      '确认文件关联',
+      `您已选择了 ${selectedComponents.length} 个BIM构件（${highlightTypeText}）。\n\n是否立即从ACC平台添加新文件，并与这些构件建立关联？\n\n点击确认后，将跳转至文件管理页面并自动开始添加流程。`,
+      () => {
+        // Store the selected component IDs for use in the file management page
+        setSelectedComponentsForFiles(selectedComponents);
+        setSelectedComponentsHighlightType(highlightType);
+        
+        // Navigate to file management page
+        setShowFileManagement(true);
+        
+        // Set a flag to automatically open the upload modal when the page loads
+        setAutoOpenUploadModal(true);
+      }
+    );
   };
 
   // Check if user is admin
@@ -1246,34 +1311,42 @@ const DWSSBIMDashboard = () => {
       }
       
       // Case 2: Some or all item components are outside filter scope
-      const confirmMessage = `该条目关联的构件超出了您当前的筛选范围，是否要清除筛选并查看所有关联构件？`;
-      
-      if (confirm(confirmMessage)) {
-        // User chooses to clear filter and view all related components
-        // 1. Clear all HyD Code filter states
-        setHydCodeFilter({
-          project: 'HY202404',
-          originator: '',
-          volume: '',
-          system: '',
-          location: '',
-          discipline: '',
-          sequential_number: ''
-        });
-        setFilterHighlightSet([]);
-        
-        // 2. Highlight all components related to this item
-        setManualHighlightSet(itemComponentIds);
-        
-        // 3. Update selection state
-        if (type === 'risc') {
-          setSelectedRISC(item.id);
-          setSelectedFile(null);
-        } else if (type === 'file') {
-          setSelectedFile(item.id);
-          setSelectedRISC(null);
+      // Show HyD Filter Confirmation Modal
+      setHydFilterConfirmConfig({
+        itemName: item.name || item.requestNo || '该条目',
+        componentCount: itemComponentIds.length,
+        itemComponentIds: itemComponentIds,
+        onConfirm: () => {
+          // User chooses to clear filter and view all related components
+          // 1. Clear all HyD Code filter states
+          setHydCodeFilter({
+            project: 'HY202404',
+            originator: '',
+            volume: '',
+            system: '',
+            location: '',
+            discipline: '',
+            sequential_number: ''
+          });
+          setFilterHighlightSet([]);
+          
+          // 2. Highlight all components related to this item
+          setManualHighlightSet(itemComponentIds);
+          
+          // 3. Update selection state
+          if (type === 'risc') {
+            setSelectedRISC(item.id);
+            setSelectedFile(null);
+          } else if (type === 'file') {
+            setSelectedFile(item.id);
+            setSelectedRISC(null);
+          }
+          
+          // 4. Close modal
+          setShowHydFilterConfirmModal(false);
         }
-      }
+      });
+      setShowHydFilterConfirmModal(true);
       // If user clicks "Cancel", do nothing - dialog closes and interface remains as is
       return;
     }
@@ -1517,20 +1590,20 @@ const DWSSBIMDashboard = () => {
   const addToBindingCart = (item: FileItem, type: string): void => {
     // Binding mode is not allowed in historical view
     if (viewMode === 'historical') {
-      alert('Binding mode is not allowed in historical view. Please switch to the current version before starting binding.');
+      showError('绑定模式不可用', '历史版本不允许进入绑定模式。请先切换到当前版本。');
       return;
     }
     
     // Check user permissions
     if (!hasBindingPermission()) {
-      alert('You do not have permission to perform binding operations');
+      showError('权限不足', '您没有执行绑定操作的权限');
       return;
     }
 
     // If editing a file, check if user has permission to edit
     if (item.objects.length > 0) {
       if (item.uploadedBy !== currentUser && !isAdmin()) {
-        alert('You can only edit files you uploaded');
+        showError('权限不足', '您只能编辑自己上传的文件');
       return;
       }
     }
@@ -2279,6 +2352,62 @@ const DWSSBIMDashboard = () => {
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
               发送邀请
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Notification Modal component
+  const NotificationModal = () => {
+    if (!showNotificationModal) return null;
+
+    const getIconAndColor = () => {
+      switch (notificationConfig.type) {
+        case 'success':
+          return { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' };
+        case 'error':
+          return { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' };
+        case 'warning':
+          return { icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+        case 'confirm':
+          return { icon: HelpCircle, color: 'text-blue-600', bgColor: 'bg-blue-50' };
+        default:
+          return { icon: Info, color: 'text-blue-600', bgColor: 'bg-blue-50' };
+      }
+    };
+
+    const { icon: Icon, color, bgColor } = getIconAndColor();
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className={`p-6 ${bgColor} rounded-t-lg`}>
+            <div className="flex items-center">
+              <Icon className={`w-6 h-6 mr-3 ${color}`} />
+              <h3 className="text-lg font-semibold text-gray-900">{notificationConfig.title}</h3>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <p className="text-gray-700 whitespace-pre-line">{notificationConfig.message}</p>
+          </div>
+          
+          <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+            {notificationConfig.showCancel && (
+              <button
+                onClick={notificationConfig.onCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                {notificationConfig.cancelText}
+              </button>
+            )}
+            <button
+              onClick={notificationConfig.onConfirm}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {notificationConfig.confirmText}
             </button>
           </div>
         </div>
@@ -4078,8 +4207,6 @@ const DWSSBIMDashboard = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [fileToDelete, setFileToDelete] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [deleteSuccess, setDeleteSuccess] = useState<{show: boolean, count: number}>({show: false, count: 0});
-    const [uploadSuccess, setUploadSuccess] = useState<{show: boolean, count: number, componentCount: number}>({show: false, count: 0, componentCount: 0});
     const [showEditModal, setShowEditModal] = useState(false);
     const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
     const [fileTypeSelections, setFileTypeSelections] = useState<{[fileId: string]: string}>({});
@@ -4371,6 +4498,9 @@ const DWSSBIMDashboard = () => {
         );
       }
       
+      // 按上传日期排序（最新的在前）
+      filteredFiles.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
+      
       return filteredFiles;
     };
     
@@ -4438,7 +4568,42 @@ const DWSSBIMDashboard = () => {
       }));
     };
     
+    // 验证所有选中的文件是否都已选择文件类型
+    const areAllFileTypesSelected = () => {
+      return selectedACCFiles.every(fileId => {
+        const selectedType = fileTypeSelections[fileId];
+        return selectedType && selectedType.trim() !== '';
+      });
+    };
+    
+    // 获取未选择文件类型的文件列表
+    const getFilesWithoutTypes = () => {
+      const allFiles = getAllACCFiles();
+      return selectedACCFiles.filter(fileId => {
+        const selectedType = fileTypeSelections[fileId];
+        return !selectedType || selectedType.trim() === '';
+      }).map(fileId => {
+        const file = allFiles.find(f => f.id === fileId);
+        return file?.name || fileId;
+      });
+    };
+    
     const handleUploadFiles = () => {
+      // 验证文件类型选择
+      if (!areAllFileTypesSelected()) {
+        const filesWithoutTypes = getFilesWithoutTypes();
+        const fileList = filesWithoutTypes.length > 3 
+          ? `${filesWithoutTypes.slice(0, 3).join('\n')}...等${filesWithoutTypes.length}个文件`
+          : filesWithoutTypes.join('\n');
+        
+        alert(
+          `文件类型选择不完整\n\n` +
+          `以下文件尚未选择文件类型：\n\n${fileList}\n\n` +
+          `请为所有文件选择对应的文件类型后再开始上传。`
+        );
+        return;
+      }
+      
       setIsUploading(true);
       setUploadProgress(0);
       
@@ -4500,16 +4665,7 @@ const DWSSBIMDashboard = () => {
       setFiles(prev => [...prev, ...newFiles]);
       
       // Show success message
-      setUploadSuccess({
-        show: true, 
-        count: newFiles.length,
-        componentCount: selectedComponentsForFiles.length
-      });
-      
-      // Hide success message after 3 seconds
-      setTimeout(() => {
-        setUploadSuccess({show: false, count: 0, componentCount: 0});
-      }, 3000);
+      showSuccess('上传成功', `文件添加成功，并已与 ${selectedComponentsForFiles.length} 个构件关联`);
       
       resetUploadModal();
     };
@@ -4533,23 +4689,19 @@ const DWSSBIMDashboard = () => {
         // If it's a single file deletion
         if (fileToDelete !== null) {
           setFiles(prevFiles => prevFiles.filter(file => file.id !== fileToDelete));
-          setDeleteSuccess({show: true, count: 1});
+          showSuccess('删除成功', '文件已成功删除');
         } 
         // If it's a bulk deletion
         else if (selectedFiles.length > 0) {
+          const count = selectedFiles.length;
           setFiles(prevFiles => prevFiles.filter(file => !selectedFiles.includes(file.id)));
-          setDeleteSuccess({show: true, count: selectedFiles.length});
+          showSuccess('删除成功', `成功删除 ${count} 个文件`);
           setSelectedFiles([]);
         }
         
         setIsDeleting(false);
         setShowDeleteConfirm(false);
         setFileToDelete(null);
-        
-        // 3秒后隐藏成功提示
-        setTimeout(() => {
-          setDeleteSuccess({show: false, count: 0});
-        }, 3000);
       }, 1000);
     };
     
@@ -4611,29 +4763,6 @@ const DWSSBIMDashboard = () => {
       );
     };
     
-    // Delete success toast
-    const DeleteSuccessToast = () => {
-      if (!deleteSuccess.show) return null;
-      
-      return (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center z-50">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          <span>Successfully deleted {deleteSuccess.count} files</span>
-        </div>
-      );
-    };
-    
-    // Upload success toast
-    const UploadSuccessToast = () => {
-      if (!uploadSuccess.show) return null;
-      
-      return (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center z-50">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          <span>文件添加成功，并已与 {uploadSuccess.componentCount} 个构件关联</span>
-        </div>
-      );
-    };
     
     const filteredFiles = getFilteredFiles();
     
@@ -4695,7 +4824,18 @@ const DWSSBIMDashboard = () => {
                 <div>
                   <h3 className="text-lg font-medium mb-4">Upload files</h3>
                   <div className="mb-4">
-                    <p className="text-gray-600 mb-2">Selected {selectedACCFiles.length} files</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-gray-600">Selected {selectedACCFiles.length} files</p>
+                      <div className={`text-xs px-2 py-1 rounded-full ${
+                        areAllFileTypesSelected()
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}>
+                        {areAllFileTypesSelected() 
+                          ? '✓ All file types selected' 
+                          : `⚠ ${getFilesWithoutTypes().length} files need type selection`}
+                      </div>
+                    </div>
                     <div className="border rounded-lg p-3 mb-4 max-h-80 overflow-y-auto space-y-3">
                       {selectedACCFiles.map(fileId => {
                         const allFiles = getAllACCFiles();
@@ -4720,8 +4860,16 @@ const DWSSBIMDashboard = () => {
                               <select
                                 value={selectedType}
                                 onChange={(e) => handleFileTypeChange(fileId, e.target.value)}
-                                className="text-sm border border-gray-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                title="Select file type"
+                                className={`text-sm border rounded px-2 py-1 bg-white focus:ring-2 transition-colors ${
+                                  selectedType && selectedType.trim() !== ''
+                                    ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                    : 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                                }`}
+                                title={
+                                  selectedType && selectedType.trim() !== ''
+                                    ? 'File type selected'
+                                    : 'Please select a file type (required)'
+                                }
                               >
                                 <option value="">Select type...</option>
                                 {availableFileTypes.map(type => (
@@ -4790,7 +4938,17 @@ const DWSSBIMDashboard = () => {
               {uploadStep === 2 && !isUploading && (
                 <button 
                   onClick={handleUploadFiles}
-                  className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700"
+                  disabled={!areAllFileTypesSelected()}
+                  className={`px-4 py-2 rounded-md text-white transition-colors ${
+                    areAllFileTypesSelected()
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-blue-300 cursor-not-allowed'
+                  }`}
+                  title={
+                    areAllFileTypesSelected()
+                      ? 'Start uploading selected files'
+                      : 'Please select file types for all files before uploading'
+                  }
                 >
                   Start uploading
                 </button>
@@ -5037,6 +5195,14 @@ const DWSSBIMDashboard = () => {
                   <Filter className="w-4 h-4 mr-1" />
                   Filter
                   {hasActiveFilters() && <span className="ml-1 w-2 h-2 rounded-full bg-blue-600"></span>}
+                </button>
+                
+                <button 
+                  className="px-3 py-1.5 rounded text-sm flex items-center bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => window.location.reload()}
+                  title="Refresh files"
+                >
+                  <RefreshCw className="w-4 h-4" />
                 </button>
                 
                 {hasActiveFilters() && (
@@ -5303,11 +5469,6 @@ const DWSSBIMDashboard = () => {
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmModal />
         
-        {/* Delete Success Toast */}
-        <DeleteSuccessToast />
-        
-        {/* Upload Success Toast */}
-        <UploadSuccessToast />
         
         {/* File Edit Modal */}
         <EditFileModal />
@@ -5440,7 +5601,7 @@ const DWSSBIMDashboard = () => {
         
       } catch (error) {
         console.error('[DELETE-BTN] Delete failed:', error);
-        alert(`Failed to delete component: ${error.message || 'Unknown error'}`);
+        showError('删除失败', `无法删除构件：${error.message || '未知错误'}`);
       } finally {
         // State updates are asynchronous, but we can reset isDeleting state immediately
         // The main purpose of isDeleting is to prevent duplicate clicks, not to reflect the actual deletion completion status
@@ -6689,6 +6850,18 @@ const DWSSBIMDashboard = () => {
           </div>
         </div>
       )}
+      
+      {/* HyD Filter Confirmation Modal */}
+      <HydFilterConfirmModal
+        isVisible={showHydFilterConfirmModal}
+        onClose={() => setShowHydFilterConfirmModal(false)}
+        onConfirm={hydFilterConfirmConfig.onConfirm || (() => {})}
+        itemName={hydFilterConfirmConfig.itemName}
+        componentCount={hydFilterConfirmConfig.componentCount}
+      />
+      
+      {/* Notification Modal */}
+      <NotificationModal />
     </div>
   );
 };
