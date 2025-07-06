@@ -1,6 +1,6 @@
 ﻿// @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ChevronRight, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
+import { ChevronDown, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
 import userGuideContent from '../USER_GUIDE.md?raw';
 import { HydFilterConfirmModal } from './components/ui/HydFilterConfirmModal';
 
@@ -183,19 +183,6 @@ const DWSSBIMDashboard = () => {
   const [viewMode, setViewMode] = useState('current');
   const [selectedModelVersion, setSelectedModelVersion] = useState('current');
   
-  // Component tree state
-  const [showComponentTree, setShowComponentTree] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
-  const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null);
-  
-  // Model tree highlight state - New independent highlight state
-  const [treeHighlightedComponentId, setTreeHighlightedComponentId] = useState<string | null>(null);
-  const [treeHighlightedGroupName, setTreeHighlightedGroupName] = useState<string | null>(null);
-  
-  // Model tree white/gray display state - New state management
-  const [treeWhiteComponents, setTreeWhiteComponents] = useState<string[]>([]); // List of component IDs displayed in white
-  const [treeWhiteGroups, setTreeWhiteGroups] = useState<string[]>([]); // List of group names displayed in white
-  const [treeShowAllWhite, setTreeShowAllWhite] = useState(true); // Whether all should be displayed in white (initial state)
   const [showUserGuide, setShowUserGuide] = useState(false); // User guide popup state
   
   // Add historical view related states
@@ -219,13 +206,11 @@ const DWSSBIMDashboard = () => {
     x: number;
     y: number;
     componentId: string | null;
-    isFromTree?: boolean; // New flag indicating if from model tree
   }>({
     visible: false,
     x: 0,
     y: 0,
-    componentId: null,
-    isFromTree: false
+    componentId: null
   });
   
   // File management page state
@@ -797,6 +782,11 @@ const DWSSBIMDashboard = () => {
     const finalSet = [...new Set([...filterHighlightSet, ...manualHighlightSet])];
     return finalSet;
   }, [filterHighlightSet, manualHighlightSet]);
+  
+  // Calculate priority-based highlight set for Add to Cart button (Manual > HyD Filter)
+  const getPriorityHighlightSet = useMemo(() => {
+    return manualHighlightSet.length > 0 ? manualHighlightSet : filterHighlightSet;
+  }, [manualHighlightSet, filterHighlightSet]);
 
   // Check if HyD Code filter is active - Updated to support historical view
   const hasHydCodeFilter = () => {
@@ -832,8 +822,6 @@ const DWSSBIMDashboard = () => {
   };
 
   const clearAllHydCodeFilters = () => {
-    // Clear model tree highlight state
-    clearTreeHighlight();
     
     // Reset HyD Code filter to default state
     setHydCodeFilter({
@@ -1197,8 +1185,6 @@ const DWSSBIMDashboard = () => {
 
   // Handle HyD Code changes - Reset rules (highest priority)
   const handleHydCodeChange = (level: keyof HydCode, value: string): void => {
-    // Clear model tree highlight state
-    clearTreeHighlight();
     
     const newHydCodeFilter = { ...hydCodeFilter, [level]: value };
     setHydCodeFilter(newHydCodeFilter);
@@ -1262,8 +1248,6 @@ const DWSSBIMDashboard = () => {
 
   // Handle list item click - Redesigned HyD Code interaction logic + historical component support
   const handleListItemClick = (item: RiscForm | FileItem, type: string): void => {
-    // Clear model tree highlight state
-    clearTreeHighlight();
     
     // Check if in HyD Code filtering mode FIRST - before any state changes
     if (hasHydCodeFilter()) {
@@ -1509,8 +1493,6 @@ const DWSSBIMDashboard = () => {
 
   // Handle BIM view component click - Same logic for binding mode and normal mode
   const handleComponentClick = (component: Component, event?: React.MouseEvent): void => {
-    // Clear model tree highlight state
-    clearTreeHighlight();
     
     // If right-click, show context menu
     if (event && event.type === 'contextmenu') {
@@ -1532,7 +1514,16 @@ const DWSSBIMDashboard = () => {
     if (hasHydCodeFilter()) {
       const isComponentInFilterSet = filterHighlightSet.includes(component.id);
       const isComponentInManualSet = manualHighlightSet.includes(component.id);
+      const isInCart = bindingCart.objects.find(o => o.id === component.id);
       
+      // In binding mode, components cannot be removed from cart by clicking
+      // Only adding to cart through "Add to Cart" button is allowed
+      if (isBindingMode) {
+        // No cart operations in binding mode for individual component clicks
+        // Cart operations only happen through "Add to Cart" button
+      }
+      
+      // Handle manual highlight set
       if (isComponentInManualSet) {
         // 如果构件已在手动高亮集合中，点击时移除（取消蓝色高亮，如果在筛选集合中则恢复为黄色高亮）
         const newManualHighlightSet = manualHighlightSet.filter(id => id !== component.id);
@@ -1554,29 +1545,41 @@ const DWSSBIMDashboard = () => {
 
     // Normal click logic in non-HyD Code filtering mode
     const isInManualSet = manualHighlightSet.includes(component.id);
+    const isInCart = bindingCart.objects.find(o => o.id === component.id);
     
-    if (isInManualSet) {
-      // Remove from manual highlight set
-      setManualHighlightSet(prev => prev.filter(id => id !== component.id));
+    // In binding mode, components cannot be removed from cart by clicking
+    // Only manual highlight operations are allowed
+    if (isBindingMode) {
+      // No cart operations in binding mode for individual component clicks
+      // Cart operations only happen through "Add to Cart" button
       
-      // If manual highlight set becomes empty, clear selection state
-      if (manualHighlightSet.length === 1) { // Will become 0 after removal
+      // Only handle manual highlight set
+      if (isInManualSet) {
+        // Remove from manual highlight set
+        setManualHighlightSet(prev => prev.filter(id => id !== component.id));
+      } else {
+        // Add to manual highlight set
+        setManualHighlightSet(prev => [...prev, component.id]);
+      }
+    } else {
+      // Normal mode: only handle manual highlight set
+      if (isInManualSet) {
+        // Remove from manual highlight set
+        setManualHighlightSet(prev => prev.filter(id => id !== component.id));
+        
+        // If manual highlight set becomes empty, clear selection state
+        if (manualHighlightSet.length === 1) { // Will become 0 after removal
+          setSelectedRISC(null);
+          setSelectedFile(null);
+        }
+      } else {
+        // Add to manual highlight set
+        setManualHighlightSet(prev => [...prev, component.id]);
+        
+        // Clear previous RISC and file selections, as it is now manual multi-select mode
         setSelectedRISC(null);
         setSelectedFile(null);
       }
-    } else {
-      // Add to manual highlight set
-      setManualHighlightSet(prev => [...prev, component.id]);
-      
-      // Clear previous RISC and file selections, as it is now manual multi-select mode
-      setSelectedRISC(null);
-      setSelectedFile(null);
-    }
-
-    // Additional processing in binding mode: automatically handle cart logic after component highlight changes
-    if (isBindingMode) {
-      // Special handling in binding mode can be added here, such as automatically adding to cart
-      // But highlight logic remains consistent with normal mode
     }
   };
 
@@ -1631,8 +1634,9 @@ const DWSSBIMDashboard = () => {
     });
     setShowBindingCart(true);
     
-    // Highlight components related to binding file
-    setManualHighlightSet(item.objects);
+    // Clear all highlights when entering binding mode - no highlights initially
+    setManualHighlightSet([]);
+    setFilterHighlightSet([]);
   };
 
   // Add object to cart
@@ -1703,10 +1707,9 @@ const DWSSBIMDashboard = () => {
       hasHistoricalObjects
     });
     
-    // Set associated components as manual highlight set
-    setManualHighlightSet(file.objects);
-    
-    // Clear filter highlight set to avoid confusion
+    // 进入文件条目的bindingmode的时候，不会自动高光绑定的构件
+    // Clear both manual and filter highlight sets to start fresh
+    setManualHighlightSet([]);
     setFilterHighlightSet([]);
     setHydCodeFilter({
       project: 'HY202404',
@@ -1729,7 +1732,7 @@ const DWSSBIMDashboard = () => {
     setIsBindingMode(true);
     
     // Success prompt
-    alert(`Entered binding edit mode\n\nFile: "${file.name.substring(0, 40)}..."\nCurrently associated with ${linkedObjects.length} components\n\nYou can highlight other components through filtering or manual selection, then use the "Add All Highlighted Components" button for batch addition.`);
+    alert(`Entered binding edit mode\n\nFile: "${file.name.substring(0, 40)}..."\nCurrently associated with ${linkedObjects.length} components\n\nYou can highlight components through filtering or manual selection, then use the "Add to Cart" button for batch addition.`);
   };
 
   // Exit binding mode
@@ -3478,7 +3481,10 @@ const DWSSBIMDashboard = () => {
     // 暂时隐藏按钮，避免用户重复点击
     setShowAddAllHighlightedButton(false);
     
-    const finalHighlightSet = getFinalHighlightSet;
+    // 当是Hydcode模式时且无手动高光，highlight components to add 就是hydcode筛选的构件
+    // 但是如果有手动高光，highlight components to add 就是手动高光的构件
+    // 手动高光的优先级大于Hydcode的高光筛选
+    const finalHighlightSet = manualHighlightSet.length > 0 ? manualHighlightSet : filterHighlightSet;
     if (finalHighlightSet.length === 0) {
       alert('没有高亮的构件可以添加。请先选择或筛选构件。');
       // 恢复按钮显示
@@ -3654,353 +3660,14 @@ const DWSSBIMDashboard = () => {
     };
   }, [isBindingMode, bindingCart.objects.length, bindingCart.files.length]);
 
-  // 添加全局点击监听器来清除模型树高亮状态
-  useEffect(() => {
-    const handleGlobalClick = (event: MouseEvent) => {
-      // 如果点击的是模型树内部或右键菜单，不清除高亮
-      const target = event.target as HTMLElement;
-      const isTreeClick = target.closest('[data-tree-container="true"]') || 
-                         target.closest('.fixed.bg-white.rounded-md.shadow-lg'); // 右键菜单
-      
-      if (!isTreeClick && (treeHighlightedComponentId || treeHighlightedGroupName)) {
-        // 只清除高亮状态，不重置白色/灰色显示状态
-        setTreeHighlightedComponentId(null);
-        setTreeHighlightedGroupName(null);
-      }
-    };
 
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
-  }, [treeHighlightedComponentId, treeHighlightedGroupName]);
+  
+  
+  
+  
+  
+  
 
-  const getComponentTree = () => {
-    const filteredComponents = getFilteredObjectGroups();
-    
-    // 按对象组分组
-    const groupedComponents: { [key: string]: Component[] } = {};
-    
-    filteredComponents.forEach(component => {
-      if (!groupedComponents[component.objectGroup]) {
-        groupedComponents[component.objectGroup] = [];
-      }
-      groupedComponents[component.objectGroup].push(component);
-    });
-    
-    return groupedComponents;
-  };
-  
-  // 切换组件组的展开/折叠状态
-  const toggleGroupExpand = (groupName: string) => {
-    setExpandedGroups(prev => {
-      if (prev.includes(groupName)) {
-        return prev.filter(g => g !== groupName);
-      } else {
-        return [...prev, groupName];
-      }
-    });
-  };
-  
-  // 切换组件树显示
-  const toggleComponentTree = () => {
-    // 关闭模型树时清除高亮状态
-    if (showComponentTree) {
-      clearTreeHighlight();
-      // 关闭模型树时重置为显示所有白色状态
-      showAllTreeObjectsWhite();
-    }
-    
-    if (!showComponentTree) {
-      // 显示模型树时，自动收纳左侧栏
-      setLeftPanelCollapsed(true);
-      setShowComponentTree(true);
-    } else {
-      // 隐藏模型树时，恢复左侧栏展开状态
-      setLeftPanelCollapsed(false);
-      setShowComponentTree(false);
-    }
-  };
-  
-  // 模型树中构件的左键点击处理
-  const handleTreeComponentClick = (component: Component, event?: React.MouseEvent): void => {
-    // 如果是右键点击，显示上下文菜单
-    if (event && event.type === 'contextmenu') {
-      event.preventDefault();
-      event.stopPropagation();
-      
-      // 如果当前构件不是白色显示，临时设置为白色以便右键菜单能正确显示选项
-      if (!treeShowAllWhite && !treeWhiteComponents.includes(component.id)) {
-        // 临时设置此构件为白色状态
-        setTreeWhiteComponents(prev => [...prev, component.id]);
-      }
-      
-      setContextMenu({
-        visible: true,
-        x: event.clientX,
-        y: event.clientY,
-        componentId: component.id,
-        isFromTree: true
-      });
-      return;
-    }
-    
-    // 左键点击：设置只有此构件为白色，其他为灰色
-    if (event) {
-      event.stopPropagation();
-    }
-    
-    setTreeShowAllWhite(false);
-    setTreeWhiteComponents([component.id]);
-    setTreeWhiteGroups([]);
-    
-    // 保持原有的高亮逻辑用于其他功能
-    setTreeHighlightedComponentId(component.id);
-    setTreeHighlightedGroupName(component.objectGroup);
-  };
-  
-  // 模型树中组的左键点击处理
-  const handleTreeGroupClick = (groupName: string, event?: React.MouseEvent): void => {
-    // 如果是右键点击，显示上下文菜单
-    if (event && event.type === 'contextmenu') {
-      event.preventDefault();
-      event.stopPropagation();
-      
-      // 设置当前右键的组名，用于判断是否为白色
-      setTreeHighlightedGroupName(groupName);
-      
-      // 如果当前组不是白色显示，临时设置为白色以便右键菜单能正确显示选项
-      if (!treeShowAllWhite && !treeWhiteGroups.includes(groupName)) {
-        // 获取此组下的所有构件
-        const groupComponents = components.filter(c => c.objectGroup === groupName);
-        // 临时设置此组及其构件为白色状态
-        setTreeWhiteGroups(prev => [...prev, groupName]);
-        setTreeWhiteComponents(prev => [...prev, ...groupComponents.map(c => c.id)]);
-      }
-      
-      setContextMenu({
-        visible: true,
-        x: event.clientX,
-        y: event.clientY,
-        componentId: null,
-        isFromTree: true
-      });
-      return;
-    }
-
-    // 左键点击：设置此组及其下所有构件为白色，其他为灰色
-    if (event) {
-      event.stopPropagation();
-    }
-    
-    setTreeShowAllWhite(false);
-    setTreeWhiteGroups([groupName]);
-    // 获取此组下的所有构件
-    const groupComponents = components.filter(c => c.objectGroup === groupName);
-    setTreeWhiteComponents(groupComponents.map(c => c.id));
-    
-    // 保持原有的高亮逻辑用于其他功能
-    setTreeHighlightedComponentId(null);
-    setTreeHighlightedGroupName(groupName);
-  };
-  
-  // 显示所有构件为白色
-  const showAllTreeObjectsWhite = (): void => {
-    setTreeShowAllWhite(true);
-    setTreeWhiteComponents([]);
-    setTreeWhiteGroups([]);
-  };
-  
-  // 清除模型树高亮状态（除了右键点击外的所有操作）
-  const clearTreeHighlight = (): void => {
-    setTreeHighlightedComponentId(null);
-    setTreeHighlightedGroupName(null);
-  };
-
-  // 组件树面板
-  const ComponentTreePanel = () => {
-    const componentTree = getComponentTree();
-    const groupNames = Object.keys(componentTree).sort();
-    const [componentFilter, setComponentFilter] = useState('');
-    
-    // 过滤组件树
-    const filteredTree: { [key: string]: Component[] } = {};
-    
-    groupNames.forEach(groupName => {
-      const filteredComponents = componentTree[groupName].filter(component => 
-        component.name.toLowerCase().includes(componentFilter.toLowerCase()) ||
-        component.objectGroup.toLowerCase().includes(componentFilter.toLowerCase()) ||
-        component.properties.material.toLowerCase().includes(componentFilter.toLowerCase())
-      );
-      
-      if (filteredComponents.length > 0) {
-        filteredTree[groupName] = filteredComponents;
-      }
-    });
-    
-    const filteredGroupNames = Object.keys(filteredTree).sort();
-    
-    // 自动展开搜索结果
-    useEffect(() => {
-      if (componentFilter) {
-        setExpandedGroups(filteredGroupNames);
-      }
-    }, [componentFilter]);
-
-    // 当模型树显示且左侧栏收纳时，在左侧栏中显示
-    if (showComponentTree && leftPanelCollapsed) {
-      return (
-        <div className="fixed left-12 top-0 bottom-0 w-80 bg-white shadow-lg border-r border-gray-200 overflow-y-auto z-50" data-tree-container="true">
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium flex items-center">
-                <Layers className="w-5 h-5 mr-2" />
-                Model Component Tree
-              </h3>
-              <div className="flex space-x-2">
-                <button 
-                  onClick={toggleComponentTree}
-                  className="p-1 hover:bg-gray-100 rounded"
-                  title="Close model tree"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            {/* 搜索过滤器 */}
-            <div className="mb-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={componentFilter}
-                  onChange={(e) => {
-                    setComponentFilter(e.target.value);
-                    clearTreeHighlight(); // 搜索时清除模型树高亮
-                    showAllTreeObjectsWhite(); // 搜索时重置为显示所有白色
-                  }}
-                  placeholder="Search components by name, material..."
-                  className="w-full border rounded-md pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Search className="w-4 h-4 text-gray-400" />
-                </div>
-                {componentFilter && (
-                  <button
-                    onClick={() => {
-                      setComponentFilter('');
-                      clearTreeHighlight(); // 清除搜索时也清除模型树高亮
-                      showAllTreeObjectsWhite(); // 清除搜索时重置为显示所有白色
-                    }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    title="Clear search"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {filteredGroupNames.length > 0 ? (
-              <div className="space-y-2">
-                {filteredGroupNames.map(groupName => {
-                  const components = filteredTree[groupName];
-                  const isExpanded = expandedGroups.includes(groupName);
-                  
-                  return (
-                    <div key={groupName} id={`component-group-${groupName}`} className="border rounded-md overflow-hidden">
-                      <div 
-                        className={`p-2 flex items-center justify-between cursor-pointer transition-colors ${
-                          // 白色/灰色显示逻辑 - 优化对比度
-                          treeShowAllWhite || treeWhiteGroups.includes(groupName) 
-                            ? 'bg-white border-l-4 border-blue-500 shadow-sm hover:bg-blue-50' 
-                            : 'bg-gray-200 text-gray-600 border-l-4 border-gray-300 hover:bg-gray-300'
-                        }`}
-                        onClick={(e) => {
-                          // 如果是组展开/收起，继续原有逻辑
-                          toggleGroupExpand(groupName);
-                          // 同时处理组的高亮
-                          handleTreeGroupClick(groupName, e);
-                        }}
-                        onContextMenu={(e) => handleTreeGroupClick(groupName, e)}
-                      >
-                        <div className="flex items-center">
-                          {isExpanded ? 
-                            <ChevronDown className="w-4 h-4 mr-2" /> : 
-                            <ChevronRight className="w-4 h-4 mr-2" />
-                          }
-                          <span className="font-medium text-sm">{groupName}</span>
-                          <span className="ml-2 text-xs text-gray-500">({components.length} components)</span>
-                        </div>
-                        <div className="flex items-center">
-                          {components.some(c => c.version !== 'current') && (
-                            <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full flex items-center mr-2">
-                              <History className="w-3 h-3 mr-1" />
-                              Contains Historical Version
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {isExpanded && (
-                        <div className="border-t">
-                          <ul className="divide-y divide-gray-100">
-                            {components.map(component => {
-                              // 获取各种状态
-                              const finalHighlightSet = getFinalHighlightSet;
-                              const isInFinalSet = finalHighlightSet.includes(component.id);
-                              const isInCart = bindingCart.objects.find(o => o.id === component.id);
-                              
-                              // 判断是否应该显示为白色
-                              const isComponentWhite = treeShowAllWhite || treeWhiteComponents.includes(component.id);
-                              
-                              return (
-                                <li 
-                                  key={component.id}
-                                  id={`component-item-${component.id}`}
-                                  className={`p-2 pl-8 text-sm cursor-pointer transition-colors ${
-                                    // 白色/灰色显示逻辑 - 优化对比度
-                                    isComponentWhite 
-                                      ? 'bg-white border-l-4 border-green-500 shadow-sm hover:bg-green-50' 
-                                      : 'bg-gray-200 text-gray-600 border-l-4 border-gray-300 hover:bg-gray-300'
-                                  } ${isInFinalSet ? 'bg-blue-50' : ''}`}
-                                  onClick={(e) => handleTreeComponentClick(component, e)}
-                                  onContextMenu={(e) => handleTreeComponentClick(component, e)}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center">
-                                      {component.version !== 'current' ? (
-                                        <History className="w-3 h-3 text-orange-600 mr-1 flex-shrink-0" />
-                                      ) : (
-                                        <div className="w-3 h-3 mr-1" />
-                                      )}
-                                      <span className="truncate">{component.name}</span>
-                                    </div>
-                                  </div>
-                                  <div className="text-xs text-gray-500 ml-4">
-                                    {component.properties.material} | v: {component.version}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                {componentFilter ? 
-                  `No components found containing "${componentFilter}"` : 
-                  'No components found matching the criteria'
-                }
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-  };
 
   // 点击页面任何地方关闭上下文菜单
   useEffect(() => {
@@ -4025,25 +3692,13 @@ const DWSSBIMDashboard = () => {
       let componentsForFiles: string[] = [];
       let highlightType: 'blue' | 'yellow' | 'mixed' = 'blue';
       
-      if (contextMenu.isFromTree) {
-        // 来自模型树的右键点击 - 使用白色显示的构件
-        if (treeShowAllWhite) {
-          // 如果所有都显示为白色，则管理所有构件的文件
-          componentsForFiles = components.map(c => c.id);
-        } else {
-          // 只管理白色构件的文件
-          componentsForFiles = treeWhiteComponents;
-        }
-        highlightType = 'mixed'; // 模型树选择被视为混合类型
-      } else {
-        // 来自BIM视图的右键点击 - 使用蓝色/黄色优先级规则
-        const blueHighlightSet = manualHighlightSet;
-        const yellowHighlightSet = filterHighlightSet;
-        
-        // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
-        componentsForFiles = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
-        highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
-      }
+      // 来自BIM视图的右键点击 - 使用蓝色/黄色优先级规则
+      const blueHighlightSet = manualHighlightSet;
+      const yellowHighlightSet = filterHighlightSet;
+      
+      // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
+      componentsForFiles = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
+      highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
       
       setSelectedComponentsForFiles(componentsForFiles);
       setSelectedComponentsHighlightType(highlightType);
@@ -4052,33 +3707,21 @@ const DWSSBIMDashboard = () => {
     };
     
     const handleShowAllObjects = () => {
-      showAllTreeObjectsWhite();
       setContextMenu({...contextMenu, visible: false});
     };
     
     const handleAddToBindingPanel = () => {
       let componentsToAdd: Component[] = [];
       
-      if (contextMenu.isFromTree) {
-        // 来自模型树的右键点击 - 添加所有白色构件
-        if (treeShowAllWhite) {
-          // 如果所有都显示为白色，则添加所有构件
-          componentsToAdd = components;
-        } else {
-          // 只添加白色构件
-          componentsToAdd = components.filter(c => treeWhiteComponents.includes(c.id));
+      // 使用原有逻辑
+      const highlightedComponents = getFinalHighlightSet;
+      if (contextMenu.componentId) {
+        const component = components.find(c => c.id === contextMenu.componentId);
+        if (component) {
+          componentsToAdd = [component];
         }
       } else {
-        // 来自其他地方的右键点击 - 使用原有逻辑
-        const highlightedComponents = getFinalHighlightSet;
-        if (contextMenu.componentId) {
-          const component = components.find(c => c.id === contextMenu.componentId);
-          if (component) {
-            componentsToAdd = [component];
-          }
-        } else {
-          componentsToAdd = components.filter(c => highlightedComponents.includes(c.id));
-        }
+        componentsToAdd = components.filter(c => highlightedComponents.includes(c.id));
       }
       
       if (componentsToAdd.length > 0) {
@@ -4094,54 +3737,23 @@ const DWSSBIMDashboard = () => {
     const shouldShowFileManagement = () => {
       if (isViewOnlyUser() || isBindingMode) return false;
       
-      if (!contextMenu.isFromTree) {
-        // 来自BIM视图的右键点击 - 优先级规则
-        if (!contextMenu.componentId) return false;
-        
-        // 如果同时存在蓝色和黄色高亮构件，只有蓝色高亮构件可以显示菜单
-        if (manualHighlightSet.length > 0 && filterHighlightSet.length > 0) {
-          return manualHighlightSet.includes(contextMenu.componentId);
-        }
-        
-        // 如果只有蓝色或只有黄色高亮构件，则都可以显示
-        return manualHighlightSet.includes(contextMenu.componentId) || 
-               filterHighlightSet.includes(contextMenu.componentId);
+      // 来自BIM视图的右键点击 - 优先级规则
+      if (!contextMenu.componentId) return false;
+      
+      // 如果同时存在蓝色和黄色高亮构件，只有蓝色高亮构件可以显示菜单
+      if (manualHighlightSet.length > 0 && filterHighlightSet.length > 0) {
+        return manualHighlightSet.includes(contextMenu.componentId);
       }
       
-      if (treeShowAllWhite) return !isViewOnlyUser() && !isBindingMode;
-      
-      // 检查右键点击的条目是否为白色
-      if (contextMenu.componentId) {
-        return treeWhiteComponents.includes(contextMenu.componentId) && !isViewOnlyUser() && !isBindingMode;
-      }
-      
-      // 如果是组级别的右键，检查组是否为白色
-      if (treeHighlightedGroupName) {
-        return treeWhiteGroups.includes(treeHighlightedGroupName) && !isViewOnlyUser() && !isBindingMode;
-      }
-      
-      return false;
+      // 如果只有蓝色或只有黄色高亮构件，则都可以显示
+      return manualHighlightSet.includes(contextMenu.componentId) || 
+             filterHighlightSet.includes(contextMenu.componentId);
     };
     
-    // 判断是否显示添加到绑定面板选项（只对白色条目显示）
+    // 判断是否显示添加到绑定面板选项
     const shouldShowAddToBindingPanel = () => {
       if (!hasBindingPermission() || !isBindingMode) return false;
-      
-      if (!contextMenu.isFromTree) return true; // 非模型树右键，使用原有逻辑
-      
-      if (treeShowAllWhite) return true; // 所有都是白色时显示
-      
-      // 检查右键点击的条目是否为白色
-      if (contextMenu.componentId) {
-        return treeWhiteComponents.includes(contextMenu.componentId);
-      }
-      
-      // 如果是组级别的右键，检查组是否为白色
-      if (treeHighlightedGroupName) {
-        return treeWhiteGroups.includes(treeHighlightedGroupName);
-      }
-      
-      return false;
+      return true;
     };
     
     return (
@@ -6110,14 +5722,14 @@ const DWSSBIMDashboard = () => {
                       </div>
                       
                       {/* 绑定模式下的批量添加按钮 */}
-                      {isBindingMode && getFinalHighlightSet.length > 0 && showAddAllHighlightedButton && (
+                      {isBindingMode && getPriorityHighlightSet.length > 0 && showAddAllHighlightedButton && (
                         <div className="mb-4 flex justify-center">
                           <button
                             onClick={addAllHighlightedToCart}
                             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center font-medium shadow-md transition-all"
                           >
                             <Plus className="w-4 h-4 mr-2" />
-                            Add all highlighted components to binding ({getFinalHighlightSet.length})
+                            Add to Cart ({getPriorityHighlightSet.length})
                           </button>
                         </div>
                       )}
@@ -6133,7 +5745,7 @@ const DWSSBIMDashboard = () => {
                       )}
                       
                       {/* 绑定模式下但没有高亮构件时的提示 */}
-                      {isBindingMode && getFinalHighlightSet.length === 0 && showAddAllHighlightedButton && (
+                      {isBindingMode && getPriorityHighlightSet.length === 0 && showAddAllHighlightedButton && (
                         <div className="mb-4 flex justify-center">
                           <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg flex items-center font-medium">
                             <Info className="w-4 h-4 mr-2" />
@@ -6181,8 +5793,9 @@ const DWSSBIMDashboard = () => {
                               scaleClass = 'transform scale-115 z-10';
                             }
                           }
-                          // 2. 蓝色持续高光 - 第二优先级（手动选择的构件或绑定购物车中的构件）
-                          else if (isInManualSet || isInCart) {
+                          // 2. 手动高光 - 第二优先级（蓝色高光）
+                          // 购物车状态不影响视图高光显示
+                          else if (isInManualSet) {
                             colorClass = 'bg-blue-500 text-white shadow-lg';
                             borderClass = 'border-blue-600';
                             scaleClass = 'transform scale-110';
@@ -6210,9 +5823,14 @@ const DWSSBIMDashboard = () => {
                             >
                               <div className="text-xs font-medium truncate flex items-center justify-between mb-1">
                                 <span className="truncate">{component.name}</span>
-                                {component.version !== 'current' && !isInCart && (
-                                  <History className="w-3 h-3 text-orange-600 flex-shrink-0 ml-1" />
-                                )}
+                                <div className="flex items-center">
+                                  {isInManualSet && (
+                                    <span className="text-xs bg-white bg-opacity-20 px-1 rounded" title="手动高光 - 点击可取消">M</span>
+                                  )}
+                                  {component.version !== 'current' && !isInCart && (
+                                    <History className="w-3 h-3 text-orange-600 flex-shrink-0 ml-1" />
+                                  )}
+                                </div>
                               </div>
                               <div className="text-xs opacity-75 truncate">{component.objectGroup}</div>
                               <div className="text-xs opacity-60">v: {component.version}</div>
@@ -6254,16 +5872,6 @@ const DWSSBIMDashboard = () => {
                         </div>
                       )}
                       
-                      {/* 模型树切换按钮 */}
-                      <div className="mt-4">
-                        <button
-                          onClick={toggleComponentTree}
-                          className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-                        >
-                          <Layers className="w-4 h-4 mr-2" />
-                          {showComponentTree ? 'Hide model part tree' : 'Show model part tree'}
-                        </button>
-                      </div>
                     </div>
                   </div>
                   
@@ -6714,8 +6322,6 @@ const DWSSBIMDashboard = () => {
       {/* Binding Management Panel - Floating Cart */}
       <BindingManagementPanel />
       
-      {/* Component tree panel */}
-      <ComponentTreePanel />
       
       {/* Right click menu */}
       <ContextMenu />
