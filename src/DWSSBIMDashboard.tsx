@@ -1202,6 +1202,17 @@ const DWSSBIMDashboard = () => {
       .map(obj => obj.id);
   };
 
+  // Check if item has components outside current HyD filter scope
+  const hasComponentsOutsideHydFilter = (item: RiscForm | FileItem) => {
+    if (!hasHydCodeFilter()) return false;
+    
+    const hydFilteredComponentIds = getHydCodeFilteredComponents();
+    const itemComponentIds = item.objects || [];
+    
+    // Check if any of the item's components are outside the current HyD filter scope
+    return itemComponentIds.some(componentId => !hydFilteredComponentIds.includes(componentId));
+  };
+
   // Filter user list
   const getFilteredUsers = () => {
     if (!userSearchText) return adminUsers;
@@ -5611,7 +5622,7 @@ const DWSSBIMDashboard = () => {
                         className="mr-2 rounded"
                       />
                       <label htmlFor="showCurrentModelBindingRisc" className="text-xs text-gray-700 cursor-pointer">
-                        Only show current model binding
+                        Latest version binding
                       </label>
                     </div>
                   </div>
@@ -5678,14 +5689,26 @@ const DWSSBIMDashboard = () => {
                                     </span>
                                   </td>
                                   <td className="py-2 px-3">
-                                    {form.bindingStatus !== 'current' && (
-                                      <div className="group relative">
-                                        {getBindingIcon(form)}
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                          {getBindingIconTooltip(form)}
+                                    <div className="flex items-center justify-center space-x-1">
+                                      {form.bindingStatus !== 'current' && (
+                                        <div className="group relative">
+                                          {getBindingIcon(form)}
+                                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                            {getBindingIconTooltip(form)}
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
+                                      )}
+                                      {hasComponentsOutsideHydFilter(form) && (
+                                        <div className="group relative">
+                                          <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+                                            <span className="text-[10px] font-bold">!</span>
+                                          </div>
+                                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                            Some components outside HyD filter scope
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               ))
@@ -6125,7 +6148,7 @@ const DWSSBIMDashboard = () => {
                         className="mr-2 rounded"
                       />
                       <label htmlFor="showCurrentModelBindingFile" className="text-xs text-gray-700 cursor-pointer">
-                        Only show current model binding
+                        Latest version binding
                       </label>
                     </div>
               
@@ -6353,6 +6376,18 @@ const DWSSBIMDashboard = () => {
                                     {getBindingIcon(file)}
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                                       {getBindingIconTooltip(file)}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* HyD过滤范围外组件指示器 */}
+                                {hasComponentsOutsideHydFilter(file) && (
+                                  <div className="group relative">
+                                    <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+                                      <span className="text-[10px] font-bold">!</span>
+                                    </div>
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                      Some components outside HyD filter scope
                                     </div>
                                   </div>
                                 )}
