@@ -857,7 +857,7 @@ const DWSSBIMDashboard = () => {
     const filteredComponents = getHydCodeFilteredComponents();
     
     if (filteredComponents.length === 0) {
-      alert('No components match the current HyD Code filter.');
+      showError('No Components Found', 'No components match the current HyD Code filter.');
       return;
     }
     
@@ -876,7 +876,7 @@ const DWSSBIMDashboard = () => {
     const filteredComponents = getHydCodeFilteredComponents();
     
     if (filteredComponents.length === 0) {
-      alert('No components match the current HyD Code filter.');
+      showError('No Components Found', 'No components match the current HyD Code filter.');
       return;
     }
     
@@ -1675,11 +1675,12 @@ const DWSSBIMDashboard = () => {
 
     // Check if already in binding mode with different files
     if (isBindingMode && bindingCart.files.length === 1 && bindingCart.files[0].id !== item.id) {
-      if (confirm('There are already other files in the current binding cart. Do you want to clear the cart and start a new binding?')) {
-        exitBindingMode();
-      } else {
-        return;
-      }
+      showConfirm(
+        'Clear Cart?',
+        'There are already other files in the current binding cart. Do you want to clear the cart and start a new binding?',
+        () => exitBindingMode()
+      );
+      return;
     }
 
     // Enter binding mode
@@ -1744,13 +1745,13 @@ const DWSSBIMDashboard = () => {
   // Modify existing binding - cancel file locking design
   const editExistingBinding = (file: FileItem): void => {
     if (!hasBindingPermission()) {
-      alert('You do not have permission to modify binding relationships');
+      showError('Permission Denied', 'You do not have permission to modify binding relationships');
       return;
     }
     
     // Permission check: Authorized users can only modify files they uploaded
     if (currentUser !== 'Administrator' && file.uploadedBy !== currentUser) {
-      alert('You can only modify binding relationships for files you uploaded');
+      showError('Permission Denied', 'You can only modify binding relationships for files you uploaded');
       return;
     }
     
@@ -1785,7 +1786,7 @@ const DWSSBIMDashboard = () => {
     setIsBindingMode(true);
     
     // Success prompt
-    alert(`Entered binding edit mode\n\nFile: "${file.name.substring(0, 40)}..."\nCurrently associated with ${linkedObjects.length} components\n\nYou can highlight components through filtering or manual selection, then use the "Add to Cart" button for batch addition.`);
+    showAlert('Binding Edit Mode', `Entered binding edit mode\n\nFile: "${file.name.substring(0, 40)}..."\nCurrently associated with ${linkedObjects.length} components\n\nYou can highlight components through filtering or manual selection, then use the "Add to Cart" button for batch addition.`);
   };
 
   // Exit binding mode
@@ -1819,12 +1820,12 @@ const DWSSBIMDashboard = () => {
     const totalObjects = bindingCart.objects.length;
     
     if (totalFiles !== 1) {
-      alert('Please select one file for binding');
+      showError('Selection Required', 'Please select one file for binding');
       return;
     }
     
     if (totalObjects === 0) {
-      alert('Please select at least one component for binding');
+      showError('Selection Required', 'Please select at least one component for binding');
       return;
     }
     
@@ -1833,7 +1834,7 @@ const DWSSBIMDashboard = () => {
       const firstModelVersion = bindingCart.objects[0].modelVersionId;
       const allSameVersion = bindingCart.objects.every(obj => obj.modelVersionId === firstModelVersion);
       if (!allSameVersion) {
-        alert('All components being bound must belong to the same version, but a file can be bound to components of any version. Please remove inconsistent components and try again.');
+        showError('Version Mismatch', 'All components being bound must belong to the same version, but a file can be bound to components of any version. Please remove inconsistent components and try again.');
         return;
       }
     }
@@ -1854,7 +1855,10 @@ const DWSSBIMDashboard = () => {
     
     confirmMessage += '\nThis operation will override the existing associations of this file.\n\nDo you confirm submission?';
     
-    if (confirm(confirmMessage)) {
+    showConfirm(
+      'Confirm Binding',
+      confirmMessage,
+      () => {
       const objectIds = bindingCart.objects.map(obj => obj.id);
       const currentTime = new Date();
       const updateDate = currentTime.toISOString().split('T')[0];
@@ -1897,8 +1901,9 @@ const DWSSBIMDashboard = () => {
       setActivityLogs(prev => [logEntry, ...prev]);
       
       exitBindingMode();
-      alert('Binding relationship successfully submitted!' + (isHistoricalFileBindingToCurrent ? '\nHistorical version file has been upgraded to current version.' : ''));
-    }
+      showSuccess('Binding Successful', 'Binding relationship successfully submitted!' + (isHistoricalFileBindingToCurrent ? '\nHistorical version file has been upgraded to current version.' : ''));
+      }
+    );
   };
 
   // Page exit confirmation function in binding mode
@@ -1945,7 +1950,7 @@ const DWSSBIMDashboard = () => {
   const handleModelVersionChange = (version) => {
     // Switching to historical version is not allowed in binding mode
     if (isBindingMode && version !== 'current') {
-      alert('Switching to historical version is not allowed in binding mode. Please exit binding mode before switching versions.');
+      showError('Mode Conflict', 'Switching to historical version is not allowed in binding mode. Please exit binding mode before switching versions.');
       return;
     }
     
@@ -1963,7 +1968,7 @@ const DWSSBIMDashboard = () => {
     if (isBindingMode && bindingCart.hasHistoricalObjects) {
       if (version === 'current') {
         // Warn the user
-        alert('The current binding cart contains historical version components. Please note that these components may not display correctly in the current view.');
+        showAlert('Historical Components Warning', 'The current binding cart contains historical version components. Please note that these components may not display correctly in the current view.');
       }
     }
   };
@@ -2038,19 +2043,19 @@ const DWSSBIMDashboard = () => {
   // Send invitation
   const handleSendInvite = () => {
     if (!inviteEmail || !inviteRole) {
-      alert('Please fill in email and select a role');
+      showError('Form Incomplete', 'Please fill in email and select a role');
       return;
     }
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inviteEmail)) {
-      alert('Please enter a valid email address');
+      showError('Invalid Email', 'Please enter a valid email address');
       return;
     }
     
     // Simulate sending invitation
-    alert(`Invitation email sent to ${inviteEmail}, role: ${inviteRole}`);
+    showSuccess('Invitation Sent', `Invitation email sent to ${inviteEmail}, role: ${inviteRole}`);
     setShowAdminInviteModal(false);
     setInviteEmail('');
     setInviteRole('');
@@ -2059,13 +2064,13 @@ const DWSSBIMDashboard = () => {
   // File type management functions
   const handleAddFileType = () => {
     if (!newFileTypeName.trim()) {
-      alert('Please enter a file type name');
+      showError('Input Required', 'Please enter a file type name');
       return;
     }
     
     // Check for duplicate names
     if (fileTypes.some(type => type.name.toLowerCase() === newFileTypeName.trim().toLowerCase())) {
-      alert('File type with this name already exists');
+      showError('Duplicate Name', 'File type with this name already exists');
       return;
     }
     
@@ -2099,13 +2104,13 @@ const DWSSBIMDashboard = () => {
 
   const handleEditFileType = (typeId, newName) => {
     if (!newName.trim()) {
-      alert('Please enter a file type name');
+      showError('Input Required', 'Please enter a file type name');
       return;
     }
     
     // Check for duplicate names (excluding current type)
     if (fileTypes.some(type => type.id !== typeId && type.name.toLowerCase() === newName.trim().toLowerCase())) {
-      alert('File type with this name already exists');
+      showError('Duplicate Name', 'File type with this name already exists');
       return;
     }
     
@@ -2137,27 +2142,31 @@ const DWSSBIMDashboard = () => {
     // Check if any files are using this file type
     const filesUsingType = files.filter(file => file.type === typeToDelete.name);
     if (filesUsingType.length > 0) {
-      alert(`Cannot delete file type "${typeToDelete.name}" because it is being used by ${filesUsingType.length} file(s).`);
+      showError('Cannot Delete', `Cannot delete file type "${typeToDelete.name}" because it is being used by ${filesUsingType.length} file(s).`);
       return;
     }
     
-    if (confirm(`Are you sure you want to delete file type "${typeToDelete.name}"? This action cannot be undone.`)) {
-      setFileTypes(prev => prev.filter(type => type.id !== typeId));
-      
-      // Add activity log
-      const logEntry = {
-        id: activityLogs.length + 1,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        user: currentUser,
-        role: 'Admin',
-        action: 'FILE_TYPE_DELETE',
-        target: 'File Type',
+    showConfirm(
+      'Delete File Type',
+      `Are you sure you want to delete file type "${typeToDelete.name}"? This action cannot be undone.`,
+      () => {
+        setFileTypes(prev => prev.filter(type => type.id !== typeId));
+        
+        // Add activity log
+        const logEntry = {
+          id: activityLogs.length + 1,
+          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          user: currentUser,
+          role: 'Admin',
+          action: 'FILE_TYPE_DELETE',
+          target: 'File Type',
         targetDetail: typeToDelete.name,
         details: `Deleted file type "${typeToDelete.name}"`,
         ip: '192.168.1.100'
       };
       setActivityLogs(prev => [logEntry, ...prev]);
-    }
+      }
+    );
   };
 
   const getStatusBadgeColor = (status) => {
@@ -3545,7 +3554,7 @@ const DWSSBIMDashboard = () => {
     // 在绑定模式下，只允许手动高亮构件加入购物车，不允许黄色筛选高亮
     const finalHighlightSet = manualHighlightSet;
     if (finalHighlightSet.length === 0) {
-      alert('没有高亮的构件可以添加。请先选择或筛选构件。');
+      showError('No Components', '没有高亮的构件可以添加。请先选择或筛选构件。');
       // 恢复按钮显示
       setShowAddAllHighlightedButton(true);
       return;
@@ -3558,7 +3567,7 @@ const DWSSBIMDashboard = () => {
     );
 
     if (highlightedComponents.length === 0) {
-      alert('高亮的构件在当前模型版本中不可用。');
+      showError('Components Unavailable', '高亮的构件在当前模型版本中不可用。');
       // 恢复按钮显示
       setShowAddAllHighlightedButton(true);
       return;
@@ -3572,7 +3581,7 @@ const DWSSBIMDashboard = () => {
     const alreadyInCartCount = highlightedComponents.length - newComponents.length;
     
     if (newComponents.length === 0) {
-      alert(`所有 ${highlightedComponents.length} 个高亮构件已在购物车中，无需重复添加。`);
+      showAlert('Already Added', `所有 ${highlightedComponents.length} 个高亮构件已在购物车中，无需重复添加。`);
       // 恢复按钮显示
       setShowAddAllHighlightedButton(true);
       return;
@@ -3582,15 +3591,20 @@ const DWSSBIMDashboard = () => {
     const modelVersions = [...new Set(newComponents.map(comp => comp.modelVersionId))];
     if (modelVersions.length > 1) {
       const confirmMessage = `Multiple versions detected among highlighted components: ${modelVersions.join(', ')}\n\nAll components in the same binding must belong to the same version, but a file can be bound to components of any version.\n\nDo you want to add only the components with version "${modelVersions[0]}"?`;
-      if (confirm(confirmMessage)) {
-        const sameVersionComponents = newComponents.filter(comp => comp.version === modelVersions[0]);
-        addMultipleComponentsToCart(sameVersionComponents, alreadyInCartCount);
-        // 添加成功后清除高亮
-        clearAllHighlightsAfterAdd();
-      } else {
-        // 用户取消，恢复按钮显示
-        setShowAddAllHighlightedButton(true);
-      }
+      showConfirm(
+        'Version Selection',
+        confirmMessage,
+        () => {
+          const sameVersionComponents = newComponents.filter(comp => comp.version === modelVersions[0]);
+          addMultipleComponentsToCart(sameVersionComponents, alreadyInCartCount);
+          // 添加成功后清除高亮
+          clearAllHighlightsAfterAdd();
+        },
+        () => {
+          // 用户取消，恢复按钮显示
+          setShowAddAllHighlightedButton(true);
+        }
+      );
       return;
     }
     
@@ -3599,23 +3613,28 @@ const DWSSBIMDashboard = () => {
       const cartVersion = bindingCart.objects[0].version;
       if (modelVersions[0] !== cartVersion) {
         const confirmMessage = `There are components with version "${cartVersion}" in the cart.\nThe highlighted components are version "${modelVersions[0]}".\n\nAll components in the same binding must belong to the same version, but files can be bound to components of any version.\n\nDo you want to clear the cart and add the highlighted components?`;
-        if (confirm(confirmMessage)) {
-          setBindingCart(prev => ({
-            ...prev,
-            objects: newComponents,
-            hasHistoricalObjects: newComponents.some(comp => comp.modelVersionId !== 'current')
-          }));
-          // 添加成功后清除高亮
-          clearAllHighlightsAfterAdd();
-          let message = `Successfully added ${newComponents.length} components to the binding cart`;
-          if (alreadyInCartCount > 0) {
-            message += `\n(Automatically skipped ${alreadyInCartCount} components that are already in the cart)`;
+        showConfirm(
+          'Clear Cart?',
+          confirmMessage,
+          () => {
+            setBindingCart(prev => ({
+              ...prev,
+              objects: newComponents,
+              hasHistoricalObjects: newComponents.some(comp => comp.modelVersionId !== 'current')
+            }));
+            // 添加成功后清除高亮
+            clearAllHighlightsAfterAdd();
+            let message = `Successfully added ${newComponents.length} components to the binding cart`;
+            if (alreadyInCartCount > 0) {
+              message += `\n(Automatically skipped ${alreadyInCartCount} components that are already in the cart)`;
+            }
+            showSuccess('Components Added', message);
+          },
+          () => {
+            // 用户取消，恢复按钮显示
+            setShowAddAllHighlightedButton(true);
           }
-          alert(message);
-        } else {
-          // 用户取消，恢复按钮显示
-          setShowAddAllHighlightedButton(true);
-        }
+        );
         return;
       }
     }
@@ -3677,11 +3696,11 @@ const DWSSBIMDashboard = () => {
       if (alreadyInCartCount > 0) {
         message += `\n(Automatically skipped ${alreadyInCartCount} components that are already in the cart)`;
       }
-      alert(message);
+      showSuccess('Components Added', message);
     } else if (alreadyInCartCount > 0) {
-      alert(`All ${alreadyInCartCount} components are already in the cart, no need to add them again`);
+      showAlert('Already Added', `All ${alreadyInCartCount} components are already in the cart, no need to add them again`);
     } else {
-      alert('The selected components are already in the cart');
+      showAlert('Already Added', 'The selected components are already in the cart');
     }
   };
 
@@ -3860,6 +3879,8 @@ const DWSSBIMDashboard = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [fileToDelete, setFileToDelete] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deletionType, setDeletionType] = useState<'unbind' | 'remove' | null>(null);
+    const [filesBecomingUnbound, setFilesBecomingUnbound] = useState<FileItem[]>([]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [fileToEdit, setFileToEdit] = useState<FileItem | null>(null);
     const [fileTypeSelections, setFileTypeSelections] = useState<{[fileId: string]: string}>({});
@@ -4249,7 +4270,8 @@ const DWSSBIMDashboard = () => {
           ? `${filesWithoutTypes.slice(0, 3).join('\n')}...等${filesWithoutTypes.length}个文件`
           : filesWithoutTypes.join('\n');
         
-        alert(
+        showError(
+          'Incomplete File Types',
           `文件类型选择不完整\n\n` +
           `以下文件尚未选择文件类型：\n\n${fileList}\n\n` +
           `请为所有文件选择对应的文件类型后再开始上传。`
@@ -4323,13 +4345,48 @@ const DWSSBIMDashboard = () => {
       resetUploadModal();
     };
     
+    // Helper function to check if a file will have remaining bindings after removing highlighted components
+    const willFileHaveRemainingBindings = (file: FileItem, highlightedComponents: string[]) => {
+      // Get components that are bound to this file but not in the highlighted set
+      const remainingBindings = file.objects.filter(componentId => !highlightedComponents.includes(componentId));
+      return remainingBindings.length > 0;
+    };
+
+    // Helper function to get files that will become unbound after deletion
+    const getFilesBecomingUnbound = (filesToCheck: FileItem[], highlightedComponents: string[]) => {
+      return filesToCheck.filter(file => !willFileHaveRemainingBindings(file, highlightedComponents));
+    };
+
     const handleDeleteFile = (fileId: number) => {
       setFileToDelete(fileId);
+      
+      // Get the file to be deleted
+      const file = files.find(f => f.id === fileId);
+      if (!file) return;
+      
+      // Get currently highlighted components (manual selection)
+      const highlightedComponents = manualHighlightSet;
+      
+      // Check if this file will have remaining bindings
+      const hasRemainingBindings = willFileHaveRemainingBindings(file, highlightedComponents);
+      
+      // Set deletion type for the modal
+      setDeletionType(hasRemainingBindings ? 'unbind' : 'remove');
       setShowDeleteConfirm(true);
     };
     
     const handleBulkDelete = () => {
       if (selectedFiles.length > 0) {
+        // Get currently highlighted components (manual selection)
+        const highlightedComponents = manualHighlightSet;
+        
+        // Get files that will become unbound
+        const filesToCheck = files.filter(file => selectedFiles.includes(file.id));
+        const filesBecomingUnbound = getFilesBecomingUnbound(filesToCheck, highlightedComponents);
+        
+        // Set deletion type for the modal
+        setDeletionType(filesBecomingUnbound.length > 0 ? 'remove' : 'unbind');
+        setFilesBecomingUnbound(filesBecomingUnbound);
         setShowDeleteConfirm(true);
       }
     };
@@ -4339,59 +4396,166 @@ const DWSSBIMDashboard = () => {
       
       // Simulate delete operation delay
       setTimeout(() => {
+        // Get currently highlighted components (manual selection)
+        const highlightedComponents = manualHighlightSet;
+        
         // If it's a single file deletion
         if (fileToDelete !== null) {
-          setFiles(prevFiles => prevFiles.filter(file => file.id !== fileToDelete));
-          showSuccess('删除成功', '文件已成功删除');
+          const file = files.find(f => f.id === fileToDelete);
+          if (file) {
+            if (deletionType === 'remove') {
+              // Remove file completely
+              setFiles(prevFiles => prevFiles.filter(f => f.id !== fileToDelete));
+              showSuccess('Deletion successful', 'File has been removed from the list');
+            } else {
+              // Just unbind from highlighted components
+              setFiles(prevFiles => prevFiles.map(f => 
+                f.id === fileToDelete 
+                  ? { ...f, objects: f.objects.filter(componentId => !highlightedComponents.includes(componentId)) }
+                  : f
+              ));
+              showSuccess('Unbinding successful', 'File has been unbound from selected components');
+            }
+          }
         } 
         // If it's a bulk deletion
         else if (selectedFiles.length > 0) {
           const count = selectedFiles.length;
-          setFiles(prevFiles => prevFiles.filter(file => !selectedFiles.includes(file.id)));
-          showSuccess('删除成功', `成功删除 ${count} 个文件`);
+          
+          if (deletionType === 'remove') {
+            // Remove files that will become unbound, unbind others
+            setFiles(prevFiles => prevFiles.map(file => {
+              if (selectedFiles.includes(file.id)) {
+                const hasRemainingBindings = willFileHaveRemainingBindings(file, highlightedComponents);
+                if (hasRemainingBindings) {
+                  // Just unbind from highlighted components
+                  return { ...file, objects: file.objects.filter(componentId => !highlightedComponents.includes(componentId)) };
+                } else {
+                  // This file will be removed (filter will handle removal)
+                  return null;
+                }
+              }
+              return file;
+            }).filter(file => file !== null));
+            
+            showSuccess('Deletion successful', `${count} files processed - some removed, others unbound`);
+          } else {
+            // Just unbind all files from highlighted components
+            setFiles(prevFiles => prevFiles.map(file => 
+              selectedFiles.includes(file.id)
+                ? { ...file, objects: file.objects.filter(componentId => !highlightedComponents.includes(componentId)) }
+                : file
+            ));
+            showSuccess('Unbinding successful', `${count} files have been unbound from selected components`);
+          }
+          
           setSelectedFiles([]);
         }
         
         setIsDeleting(false);
         setShowDeleteConfirm(false);
         setFileToDelete(null);
+        setDeletionType(null);
+        setFilesBecomingUnbound([]);
       }, 1000);
     };
     
     const cancelDelete = () => {
       setShowDeleteConfirm(false);
       setFileToDelete(null);
+      setDeletionType(null);
+      setFilesBecomingUnbound([]);
     };
     
     // Delete confirmation dialog
     const DeleteConfirmModal = () => {
       if (!showDeleteConfirm) return null;
       
-      const count = fileToDelete !== null ? 1 : selectedFiles.length;
-      const fileNames = fileToDelete !== null 
-        ? files.find(f => f.id === fileToDelete)?.name || "Unknown file"
-        : selectedFiles.length > 2 
-          ? `${files.find(f => f.id === selectedFiles[0])?.name || "Unknown file"} and ${selectedFiles.length - 1} more files` 
-          : selectedFiles.map(id => files.find(f => f.id === id)?.name || "Unknown file").join(", ");
+      const isSingleFile = fileToDelete !== null;
+      const count = isSingleFile ? 1 : selectedFiles.length;
+      
+      // Get display names for files
+      const getFileNames = () => {
+        if (isSingleFile) {
+          return files.find(f => f.id === fileToDelete)?.name || "Unknown file";
+        } else {
+          return selectedFiles.length > 2 
+            ? `${files.find(f => f.id === selectedFiles[0])?.name || "Unknown file"} and ${selectedFiles.length - 1} more files`
+            : selectedFiles.map(id => files.find(f => f.id === id)?.name || "Unknown file").join(", ");
+        }
+      };
+      
+      // Get files that will be removed from list
+      const getFilesBeingRemovedNames = () => {
+        if (isSingleFile) {
+          const file = files.find(f => f.id === fileToDelete);
+          return file ? file.name : "Unknown file";
+        } else {
+          return filesBecomingUnbound.map(f => f.name).join(", ");
+        }
+      };
+      
+      // Determine message based on deletion type
+      const getMessage = () => {
+        if (deletionType === 'remove') {
+          if (isSingleFile) {
+            return {
+              title: "Confirm File Removal",
+              message: `Removing the binding relationship for this file will result in it having no bound components in the BIM model, so it will be removed from the file list. This action cannot be undone. Are you sure you want to proceed?`,
+              icon: AlertCircle,
+              iconColor: "text-red-600",
+              iconBg: "bg-red-100"
+            };
+          } else {
+            return {
+              title: "Confirm File Removal",
+              message: `Removing the binding relationships for these files will result in some files (${getFilesBeingRemovedNames()}) having no bound components in the BIM model, so they will be removed from the file list. This action cannot be undone. Are you sure you want to proceed?`,
+              icon: AlertCircle,
+              iconColor: "text-red-600",
+              iconBg: "bg-red-100"
+            };
+          }
+        } else {
+          if (isSingleFile) {
+            return {
+              title: "Confirm Unbinding",
+              message: `Are you sure you want to unbind the current file from the selected components?`,
+              icon: Link,
+              iconColor: "text-blue-600",
+              iconBg: "bg-blue-100"
+            };
+          } else {
+            return {
+              title: "Confirm Batch Unbinding",
+              message: `Are you sure you want to unbind the current batch files from the selected components?`,
+              icon: Link,
+              iconColor: "text-blue-600",
+              iconBg: "bg-blue-100"
+            };
+          }
+        }
+      };
+      
+      const messageInfo = getMessage();
+      const IconComponent = messageInfo.icon;
       
       return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
-                <AlertCircle className="w-8 h-8" />
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${messageInfo.iconBg} ${messageInfo.iconColor} mb-4`}>
+                <IconComponent className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-medium mb-2">Confirm deletion</h3>
-              <p className="text-gray-600">
-                Are you sure you want to delete <span className="font-medium">{fileNames}</span>?
+              <h3 className="text-lg font-medium mb-2">{messageInfo.title}</h3>
+              <p className="text-gray-600 text-left">
+                {messageInfo.message}
               </p>
-              <p className="text-gray-500 text-sm mt-2">This action cannot be undone</p>
             </div>
             
             {isDeleting ? (
               <div className="flex justify-center items-center py-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-                <span className="ml-2 text-gray-600">Deleting...</span>
+                <span className="ml-2 text-gray-600">Processing...</span>
               </div>
             ) : (
               <div className="flex justify-end space-x-3">
@@ -4404,10 +4568,14 @@ const DWSSBIMDashboard = () => {
                 </button>
                 <button 
                   onClick={confirmDelete}
-                  className="px-4 py-2 bg-red-600 rounded-md text-white hover:bg-red-700"
+                  className={`px-4 py-2 rounded-md text-white ${
+                    deletionType === 'remove' 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                   disabled={isDeleting}
                 >
-                  Confirm deletion
+                  {deletionType === 'remove' ? 'Confirm Removal' : 'Confirm Unbinding'}
                 </button>
               </div>
             )}
@@ -6316,7 +6484,7 @@ const DWSSBIMDashboard = () => {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     // Here we would show file preview
-                                    alert(`Preview file: ${file.name}`);
+                                    showAlert('File Preview', `Preview file: ${file.name}`);
                                   }}
                                   className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
                                   title="Preview file"
@@ -6340,7 +6508,7 @@ const DWSSBIMDashboard = () => {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (viewMode === 'historical') {
-                                            alert('Historical view does not allow entering binding mode. Please switch to the current version first.');
+                                            showError('Mode Restricted', 'Historical view does not allow entering binding mode. Please switch to the current version first.');
                                             return;
                                           }
                                           editExistingBinding(file);
