@@ -1,6 +1,6 @@
 // BIM查看器组件
 import React from 'react';
-import { History, Plus, Target } from 'lucide-react';
+import { History, Plus, Target, CheckCircle, X } from 'lucide-react';
 import { Component, ModelVersion, BindingCart } from '../../types';
 
 interface BIMViewerProps {
@@ -18,6 +18,8 @@ interface BIMViewerProps {
   hasHydCodeFilter: boolean;
   onComponentClick: (component: Component) => void;
   onAddAllHighlightedToCart?: () => void;
+  onSelectAllFilteredComponents?: () => void;
+  onClearFilteredManualSelection?: () => void;
   selectedRISC?: string | null;
   selectedFile?: number | null;
   hoveredItem?: any;
@@ -40,6 +42,8 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
   hasHydCodeFilter,
   onComponentClick,
   onAddAllHighlightedToCart,
+  onSelectAllFilteredComponents,
+  onClearFilteredManualSelection,
   selectedRISC,
   selectedFile,
   hoveredItem,
@@ -164,6 +168,28 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       添加所有高亮构件到绑定 ({finalHighlightSet.length})
+                    </button>
+                  </div>
+                )}
+
+                {/* HyD筛选模式下的控制按钮 */}
+                {hasHydCodeFilter && !isBindingMode && (
+                  <div className="mb-4 flex justify-center space-x-3">
+                    <button
+                      onClick={onSelectAllFilteredComponents}
+                      disabled={!onSelectAllFilteredComponents}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center font-medium shadow-md transition-all"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Select All ({filterHighlightSet.length})
+                    </button>
+                    <button
+                      onClick={onClearFilteredManualSelection}
+                      disabled={!onClearFilteredManualSelection || manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length === 0}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center font-medium shadow-md transition-all"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Clear All ({manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length})
                     </button>
                   </div>
                 )}

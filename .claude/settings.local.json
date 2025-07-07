@@ -7,7 +7,9 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(npm run dev:*)",
-      "Bash(npm run deploy:*)"
+      "Bash(npm run deploy:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

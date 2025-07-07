@@ -734,13 +734,12 @@ const DWSSBIMDashboard = () => {
 
   // Handle adding file for selected components
   const handleAddFileForSelectedComponents = (): void => {
-    // 优先规则：蓝色高亮（手动选择）优先于黄色高亮（HyD筛选）
+    // 只允许蓝色高亮（手动选择）构件进行文件关联，不允许黄色高亮（HyD筛选）
     const blueHighlightSet = manualHighlightSet;
-    const yellowHighlightSet = filterHighlightSet;
     
-    // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
-    const selectedComponents = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
-    const highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
+    // 只使用蓝色手动高亮构件
+    const selectedComponents = blueHighlightSet;
+    const highlightType = 'blue';
     
     // Check if any components are highlighted
     if (selectedComponents.length === 0) {
@@ -748,7 +747,7 @@ const DWSSBIMDashboard = () => {
     }
     
     // Show confirmation dialog with the specified format
-    const highlightTypeText = highlightType === 'blue' ? '蓝色高亮（手动选择）' : '黄色高亮（HyD筛选）';
+    const highlightTypeText = '蓝色高亮（手动选择）';
     
     showConfirm(
       '确认文件关联',
@@ -785,8 +784,13 @@ const DWSSBIMDashboard = () => {
   
   // Calculate priority-based highlight set for Add to Cart button (Manual > HyD Filter)
   const getPriorityHighlightSet = useMemo(() => {
+    // 在绑定模式下，只允许手动高亮构件加入购物车，不允许黄色筛选高亮
+    if (isBindingMode) {
+      return manualHighlightSet;
+    }
+    // 在非绑定模式下，保持原有优先级逻辑
     return manualHighlightSet.length > 0 ? manualHighlightSet : filterHighlightSet;
-  }, [manualHighlightSet, filterHighlightSet]);
+  }, [manualHighlightSet, filterHighlightSet, isBindingMode]);
 
   // Check if HyD Code filter is active - Updated to support historical view
   const hasHydCodeFilter = () => {
@@ -843,6 +847,53 @@ const DWSSBIMDashboard = () => {
     setHoveredObjects([]);
     setHoveredItem(null);
     setHoveredItemType(null);
+  };
+
+  // Select all HyD Code filtered components as manual highlights
+  const selectAllHydCodeComponents = () => {
+    if (!hasHydCodeFilter()) return;
+    
+    // Get all components that match the current HyD Code filter
+    const filteredComponents = getHydCodeFilteredComponents();
+    
+    if (filteredComponents.length === 0) {
+      alert('No components match the current HyD Code filter.');
+      return;
+    }
+    
+    // Add all filtered components to manual highlight set (blue highlights)
+    setManualHighlightSet(filteredComponents);
+    
+    // Show success message
+    showSuccess('Components Selected', `Selected ${filteredComponents.length} components matching HyD Code filter as manual highlights.`);
+  };
+
+  // Clear all manual highlights of HyD Code filtered components
+  const clearAllHydCodeManualHighlights = () => {
+    if (!hasHydCodeFilter()) return;
+    
+    // Get all components that match the current HyD Code filter
+    const filteredComponents = getHydCodeFilteredComponents();
+    
+    if (filteredComponents.length === 0) {
+      alert('No components match the current HyD Code filter.');
+      return;
+    }
+    
+    // Remove HyD Code filtered components from manual highlight set
+    const remainingManualHighlights = manualHighlightSet.filter(
+      componentId => !filteredComponents.includes(componentId)
+    );
+    
+    setManualHighlightSet(remainingManualHighlights);
+    
+    // Show success message
+    const clearedCount = manualHighlightSet.length - remainingManualHighlights.length;
+    if (clearedCount > 0) {
+      showSuccess('Highlights Cleared', `Cleared ${clearedCount} manual highlights of HyD Code filtered components.`);
+    } else {
+      showSuccess('No Changes', 'No manual highlights were found for the current HyD Code filtered components.');
+    }
   };
 
   // Clear all user selections - New feature
@@ -1708,18 +1759,9 @@ const DWSSBIMDashboard = () => {
     });
     
     // 进入文件条目的bindingmode的时候，不会自动高光绑定的构件
-    // Clear both manual and filter highlight sets to start fresh
+    // Clear manual highlight sets but preserve HyD filter settings
     setManualHighlightSet([]);
-    setFilterHighlightSet([]);
-    setHydCodeFilter({
-      project: 'HY202404',
-      originator: '',
-      volume: '',
-      system: '',
-      location: '',
-      discipline: '',
-      sequential_number: ''
-    });
+    // Note: filterHighlightSet and hydCodeFilter are preserved for user convenience
     
     // Comment out automatic version switching logic - always maintain current version view in binding mode
     // This ensures that the binding panel only displays current version components, avoiding mixed display of historical components
@@ -1744,6 +1786,14 @@ const DWSSBIMDashboard = () => {
     setHoveredObjects([]);
     setHoveredItem(null);
     setHoveredItemType(null);
+    
+    // Clear blue highlights from manual selection but preserve HyD filter highlights
+    setManualHighlightSet([]);
+    setSelectedComponentsForFiles([]);
+    setSelectedComponentsHighlightType('blue');
+    
+    // Note: filterHighlightSet (yellow HyD highlights) is preserved
+    // Note: HyD filter states are preserved
     
     // If previously in historical view, restore to current view
     if (viewMode === 'historical') {
@@ -3481,10 +3531,8 @@ const DWSSBIMDashboard = () => {
     // 暂时隐藏按钮，避免用户重复点击
     setShowAddAllHighlightedButton(false);
     
-    // 当是Hydcode模式时且无手动高光，highlight components to add 就是hydcode筛选的构件
-    // 但是如果有手动高光，highlight components to add 就是手动高光的构件
-    // 手动高光的优先级大于Hydcode的高光筛选
-    const finalHighlightSet = manualHighlightSet.length > 0 ? manualHighlightSet : filterHighlightSet;
+    // 在绑定模式下，只允许手动高亮构件加入购物车，不允许黄色筛选高亮
+    const finalHighlightSet = manualHighlightSet;
     if (finalHighlightSet.length === 0) {
       alert('没有高亮的构件可以添加。请先选择或筛选构件。');
       // 恢复按钮显示
@@ -3569,24 +3617,13 @@ const DWSSBIMDashboard = () => {
 
   // 清除所有高亮状态的辅助函数
   const clearAllHighlightsAfterAdd = (): void => {
-    // 在绑定模式下，点击添加构件后，确保所有高亮效果都被清除
+    // 在绑定模式下，点击添加构件后，清除蓝色高亮但保留HyD筛选和黄色高亮
     
-    // 清除手动高亮集
+    // 清除手动高亮集（蓝色高亮）
     setManualHighlightSet([]);
     
-    // 清除筛选高亮集
-    setFilterHighlightSet([]);
-    
-    // 清除HyD Code筛选（如果有的话）
-    setHydCodeFilter({
-      project: 'HY202404',
-      originator: '',
-      volume: '',
-      system: '',
-      location: '',
-      discipline: '',
-      sequential_number: ''
-    });
+    // 保留筛选高亮集（黄色高亮）和HyD Code筛选
+    // Note: filterHighlightSet and hydCodeFilter are preserved per user requirements
     
     // 清除选择状态
     setSelectedRISC(null);
@@ -3692,13 +3729,12 @@ const DWSSBIMDashboard = () => {
       let componentsForFiles: string[] = [];
       let highlightType: 'blue' | 'yellow' | 'mixed' = 'blue';
       
-      // 来自BIM视图的右键点击 - 使用蓝色/黄色优先级规则
+      // 来自BIM视图的右键点击 - 只允许蓝色手动高亮构件
       const blueHighlightSet = manualHighlightSet;
-      const yellowHighlightSet = filterHighlightSet;
       
-      // 确定最终的构件选择：蓝色优先，没有蓝色时使用黄色
-      componentsForFiles = blueHighlightSet.length > 0 ? blueHighlightSet : yellowHighlightSet;
-      highlightType = blueHighlightSet.length > 0 ? 'blue' : 'yellow';
+      // 只使用蓝色手动高亮构件，不允许黄色筛选高亮
+      componentsForFiles = blueHighlightSet;
+      highlightType = 'blue';
       
       setSelectedComponentsForFiles(componentsForFiles);
       setSelectedComponentsHighlightType(highlightType);
@@ -3733,21 +3769,15 @@ const DWSSBIMDashboard = () => {
       setContextMenu({...contextMenu, visible: false});
     };
 
-    // 判断是否显示管理关联文件选项（对蓝色和黄色构件都显示） 
+    // 判断是否显示管理关联文件选项（只有蓝色手动高亮构件可以显示） 
     const shouldShowFileManagement = () => {
       if (isViewOnlyUser() || isBindingMode) return false;
       
-      // 来自BIM视图的右键点击 - 优先级规则
+      // 来自BIM视图的右键点击 - 只允许手动高亮构件
       if (!contextMenu.componentId) return false;
       
-      // 如果同时存在蓝色和黄色高亮构件，只有蓝色高亮构件可以显示菜单
-      if (manualHighlightSet.length > 0 && filterHighlightSet.length > 0) {
-        return manualHighlightSet.includes(contextMenu.componentId);
-      }
-      
-      // 如果只有蓝色或只有黄色高亮构件，则都可以显示
-      return manualHighlightSet.includes(contextMenu.componentId) || 
-             filterHighlightSet.includes(contextMenu.componentId);
+      // 只有蓝色手动高亮构件可以显示文件管理菜单，黄色筛选高亮构件不可以
+      return manualHighlightSet.includes(contextMenu.componentId);
     };
     
     // 判断是否显示添加到绑定面板选项
@@ -5721,9 +5751,9 @@ const DWSSBIMDashboard = () => {
                         )}
                       </div>
                       
-                      {/* 绑定模式下的批量添加按钮 */}
+                      {/* 绑定模式下的按钮组 */}
                       {isBindingMode && getPriorityHighlightSet.length > 0 && showAddAllHighlightedButton && (
-                        <div className="mb-4 flex justify-center">
+                        <div className="mb-4 flex justify-center space-x-3">
                           <button
                             onClick={addAllHighlightedToCart}
                             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center font-medium shadow-md transition-all"
@@ -5731,6 +5761,35 @@ const DWSSBIMDashboard = () => {
                             <Plus className="w-4 h-4 mr-2" />
                             Add to Cart ({getPriorityHighlightSet.length})
                           </button>
+                          
+                          {/* 绑定模式下的HyD筛选控制按钮 */}
+                          {hasHydCodeFilter && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  // Select All: 将所有HyD筛选的构件添加到手动高光集
+                                  const newManualSet = new Set([...manualHighlightSet, ...filterHighlightSet]);
+                                  setManualHighlightSet(Array.from(newManualSet));
+                                }}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-md transition-all"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Select All ({filterHighlightSet.length})
+                              </button>
+                              <button
+                                onClick={() => {
+                                  // Clear All: 清除HyD筛选构件中的手动高光
+                                  const clearedManualSet = manualHighlightSet.filter(id => !filterHighlightSet.includes(id));
+                                  setManualHighlightSet(clearedManualSet);
+                                }}
+                                disabled={manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length === 0}
+                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center font-medium shadow-md transition-all"
+                              >
+                                <X className="w-4 h-4 mr-2" />
+                                Clear All ({manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length})
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                       
@@ -5751,6 +5810,35 @@ const DWSSBIMDashboard = () => {
                             <Info className="w-4 h-4 mr-2" />
                             Please select or filter components to highlight
                           </div>
+                        </div>
+                      )}
+
+                      {/* HyD筛选模式下的控制按钮 */}
+                      {hasHydCodeFilter && !isBindingMode && (
+                        <div className="mb-4 flex justify-center space-x-3">
+                          <button
+                            onClick={() => {
+                              // Select All: 将所有HyD筛选的构件添加到手动高光集
+                              const newManualSet = new Set([...manualHighlightSet, ...filterHighlightSet]);
+                              setManualHighlightSet(Array.from(newManualSet));
+                            }}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-md transition-all"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Select All ({filterHighlightSet.length})
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Clear All: 清除HyD筛选构件中的手动高光
+                              const clearedManualSet = manualHighlightSet.filter(id => !filterHighlightSet.includes(id));
+                              setManualHighlightSet(clearedManualSet);
+                            }}
+                            disabled={manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length === 0}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center font-medium shadow-md transition-all"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Clear All ({manualHighlightSet.filter(id => filterHighlightSet.includes(id)).length})
+                          </button>
                         </div>
                       )}
 
