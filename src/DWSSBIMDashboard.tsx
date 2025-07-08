@@ -4672,7 +4672,7 @@ const DWSSBIMDashboard = () => {
                       }`}>
                         {areAllFileTypesSelected() 
                           ? '✓ All file types selected' 
-                          : `⚠ ${filesWithoutTypesCount} files need type selection`}
+                          : '⚠ Files need type selection'}
                       </div>
                     </div>
                     <div className="border rounded-lg p-3 mb-4 max-h-80 overflow-y-auto space-y-3">
