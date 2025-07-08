@@ -4253,13 +4253,23 @@ const DWSSBIMDashboard = () => {
     // 获取未选择文件类型的文件列表
     const getFilesWithoutTypes = () => {
       const allFiles = getAllACCFiles();
-      return selectedACCFiles.filter(fileId => {
+      const filesWithoutTypes = selectedACCFiles.filter(fileId => {
         const selectedType = fileTypeSelections[fileId];
         return !selectedType || selectedType.trim() === '';
-      }).map(fileId => {
+      });
+      
+      return filesWithoutTypes.map(fileId => {
         const file = allFiles.find(f => f.id === fileId);
         return file?.name || fileId;
       });
+    };
+    
+    // 获取未选择文件类型的文件数量
+    const getFilesWithoutTypesCount = () => {
+      return selectedACCFiles.filter(fileId => {
+        const selectedType = fileTypeSelections[fileId];
+        return !selectedType || selectedType.trim() === '';
+      }).length;
     };
     
     const handleUploadFiles = () => {
@@ -4654,7 +4664,7 @@ const DWSSBIMDashboard = () => {
                       }`}>
                         {areAllFileTypesSelected() 
                           ? '✓ All file types selected' 
-                          : `⚠ ${getFilesWithoutTypes().length} files need type selection`}
+                          : `⚠ ${getFilesWithoutTypesCount()} files need type selection`}
                       </div>
                     </div>
                     <div className="border rounded-lg p-3 mb-4 max-h-80 overflow-y-auto space-y-3">
