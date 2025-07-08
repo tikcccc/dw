@@ -5018,13 +5018,9 @@ const DWSSBIMDashboard = () => {
                   {hasActiveFilters() && <span className="ml-1 w-2 h-2 rounded-full bg-blue-600"></span>}
                 </button>
                 
-                <button 
-                  className="px-3 py-1.5 rounded text-sm flex items-center bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  onClick={() => window.location.reload()}
-                  title="Refresh files"
-                >
+                <div className="px-3 py-1.5 rounded text-sm flex items-center bg-gray-100 text-gray-700">
                   <RefreshCw className="w-4 h-4" />
-                </button>
+                </div>
                 
                 {hasActiveFilters() && (
                   <button 
@@ -6240,18 +6236,16 @@ const DWSSBIMDashboard = () => {
                       {hasBindingPermission() && !isViewOnlyUser() && !isBindingMode && (
                         <button 
                           onClick={handleAddFileForSelectedComponents}
-                          disabled={manualHighlightSet.length === 0 && filterHighlightSet.length === 0}
+                          disabled={manualHighlightSet.length === 0}
                           className={`flex items-center px-2 py-1 rounded text-xs ${
-                            (manualHighlightSet.length > 0 || filterHighlightSet.length > 0)
+                            manualHighlightSet.length > 0
                               ? 'bg-blue-600 text-white hover:bg-blue-700' 
                               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           }`}
                           title={
                             manualHighlightSet.length > 0 
                               ? `Add file for ${manualHighlightSet.length} blue highlighted components` 
-                              : filterHighlightSet.length > 0 
-                                ? `Add file for ${filterHighlightSet.length} yellow highlighted components (HyD filtered)`
-                                : "Please highlight components in the BIM view first (blue for manual selection or yellow for HyD filtering)"
+                              : "Please highlight components in the BIM view first (blue for manual selection)"
                           }
                         >
                           <Plus className="w-3 h-3 mr-1" />
