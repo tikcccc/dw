@@ -1,6 +1,6 @@
 ﻿// @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
 import userGuideContent from '../USER_GUIDE.md?raw';
 import { HydFilterConfirmModal } from './components/ui/HydFilterConfirmModal';
 
