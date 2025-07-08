@@ -4272,6 +4272,14 @@ const DWSSBIMDashboard = () => {
       }).length;
     };
     
+    // 使用useMemo确保计数正确更新
+    const filesWithoutTypesCount = useMemo(() => {
+      return selectedACCFiles.filter(fileId => {
+        const selectedType = fileTypeSelections[fileId];
+        return !selectedType || selectedType.trim() === '';
+      }).length;
+    }, [selectedACCFiles, fileTypeSelections]);
+    
     const handleUploadFiles = () => {
       // 验证文件类型选择
       if (!areAllFileTypesSelected()) {
@@ -4664,7 +4672,7 @@ const DWSSBIMDashboard = () => {
                       }`}>
                         {areAllFileTypesSelected() 
                           ? '✓ All file types selected' 
-                          : `⚠ ${getFilesWithoutTypesCount()} files need type selection`}
+                          : `⚠ ${filesWithoutTypesCount} files need type selection`}
                       </div>
                     </div>
                     <div className="border rounded-lg p-3 mb-4 max-h-80 overflow-y-auto space-y-3">
