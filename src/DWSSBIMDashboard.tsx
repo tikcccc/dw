@@ -5105,7 +5105,7 @@ const DWSSBIMDashboard = () => {
                       onChange={(e) => setShowMyFilesOnly(e.target.checked)}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
                     />
-                    <span className="text-sm text-gray-700">Show only my uploaded files</span>
+                    <span className="text-sm text-gray-700">My uploaded files</span>
                   </label>
                 </div>
               </div>
