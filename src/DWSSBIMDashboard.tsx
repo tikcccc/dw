@@ -4297,6 +4297,28 @@ const DWSSBIMDashboard = () => {
         return;
       }
       
+      // 检查重复文件
+      const allACCFiles = getAllACCFiles();
+      const duplicateFiles = selectedACCFiles.filter(fileId => {
+        const accFile = allACCFiles.find(f => f.id === fileId);
+        return accFile && files.some(existingFile => existingFile.name === accFile.name);
+      });
+      
+      if (duplicateFiles.length > 0) {
+        const duplicateList = duplicateFiles.map(fileId => {
+          const accFile = allACCFiles.find(f => f.id === fileId);
+          return `• ${accFile?.name || 'Unnamed file'}`;
+        }).join('\n');
+        
+        showError(
+          'Duplicate Files Detected',
+          `发现重复文件\n\n` +
+          `以下文件已存在于文件列表中：\n\n${duplicateList}\n\n` +
+          `请取消选择这些文件或删除已有文件后再上传。`
+        );
+        return;
+      }
+      
       setIsUploading(true);
       setUploadProgress(0);
       
