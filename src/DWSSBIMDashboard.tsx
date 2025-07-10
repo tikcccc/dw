@@ -3599,22 +3599,60 @@ const DWSSBIMDashboard = () => {
         {/* 对象组 */}
         {bindingCart.objects.length > 0 && (
           <div>
-            <div className="text-xs font-medium text-gray-600 mb-2 flex items-center">
-              <Layers className="w-3 h-3 mr-1" />
-              Components ({bindingCart.objects.length})
+            <div className="text-xs font-medium text-gray-600 mb-2 flex items-center justify-between">
+              <div className="flex items-center">
+                <Layers className="w-3 h-3 mr-1" />
+                Components ({bindingCart.objects.length})
+              </div>
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => {
+                    const componentIds = bindingCart.objects.map(obj => obj.id);
+                    setManualHighlightSet(prev => [...new Set([...prev, ...componentIds])]);
+                  }}
+                  className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                  title="Select all components"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={() => {
+                    const componentIds = bindingCart.objects.map(obj => obj.id);
+                    setManualHighlightSet(prev => prev.filter(id => !componentIds.includes(id)));
+                  }}
+                  className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200 transition-colors"
+                  title="Clear all selections"
+                >
+                  Clear All
+                </button>
+              </div>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {bindingCart.objects.map((obj, index) => (
-                <div 
-                  key={`${obj.id}-${index}-${bindingCart.objects.length}`} // 更强的key值确保重新渲染
-                  className="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors duration-200 relative"
-                  title={`构件: ${obj.name}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div 
-                      className="flex-1 min-w-0 pr-3 cursor-default"
-                      title={`Hover to view the position of the component in the BIM view: ${obj.name}`}
-                    >
+              {bindingCart.objects.map((obj, index) => {
+                const isManuallyHighlighted = manualHighlightSet.includes(obj.id);
+                return (
+                  <div 
+                    key={`${obj.id}-${index}-${bindingCart.objects.length}`} // 更强的key值确保重新渲染
+                    className={`p-3 rounded-lg border transition-colors duration-200 relative cursor-pointer ${
+                      isManuallyHighlighted 
+                        ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' 
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                    title={`Click to ${isManuallyHighlighted ? 'remove' : 'add'} manual highlight for: ${obj.name}`}
+                    onClick={() => {
+                      const isHighlighted = manualHighlightSet.includes(obj.id);
+                      if (isHighlighted) {
+                        setManualHighlightSet(prev => prev.filter(id => id !== obj.id));
+                      } else {
+                        setManualHighlightSet(prev => [...prev, obj.id]);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div 
+                        className="flex-1 min-w-0 pr-3"
+                        title={`Component: ${obj.name}${isManuallyHighlighted ? ' (Manually highlighted)' : ''}`}
+                      >
                       <div className="text-sm font-medium text-gray-900 flex items-center">
                         {obj.name}
                         {obj.modelVersionId !== 'current' && (
@@ -3628,7 +3666,8 @@ const DWSSBIMDashboard = () => {
                     <DeleteComponentButton component={obj} />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
