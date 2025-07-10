@@ -1,8 +1,10 @@
 ﻿// @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Filter, Plus, Eye, Edit, Trash2, Settings, Download, Upload, Link, Users, Activity, Home, Menu, X, CheckCircle, AlertCircle, AlertTriangle, Clock, FileText, Folder, Calendar, GitCompare, Info, HelpCircle, ArrowLeft, ArrowRight, List, Layers, ChevronsLeft, ChevronsRight, ShoppingCart, Target, Mail, History, Lock, RefreshCw } from 'lucide-react';
 import userGuideContent from '../USER_GUIDE.md?raw';
 import { HydFilterConfirmModal } from './components/ui/HydFilterConfirmModal';
+import { BindingService } from './services/bindingService';
+import { HydCodeValidator } from './services/hydCodeValidator';
 
 // Error Boundary Component
 class ErrorBoundaryComponent extends React.Component {
@@ -221,7 +223,21 @@ const DWSSBIMDashboard = () => {
   // Highlight system - Redesigned
   const [filterHighlightSet, setFilterHighlightSet] = useState<string[]>([]); // Filter highlight set
   const [manualHighlightSet, setManualHighlightSet] = useState<string[]>([]); // Manual highlight set
+  const [invalidHydHighlightSet, setInvalidHydHighlightSet] = useState<string[]>([]); // Red highlight set for invalid HyD codes
   // Final highlight set is calculated as: filterHighlightSet ∪ manualHighlightSet
+  
+  // Modal state for HyD validation warnings
+  const [hydValidationModal, setHydValidationModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    invalidComponentIds?: string[];
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    invalidComponentIds: []
+  });
   
   const [hoveredObjects, setHoveredObjects] = useState<string[]>([]);
   const [hoveredItem, setHoveredItem] = useState<any>(null);
@@ -463,19 +479,90 @@ const DWSSBIMDashboard = () => {
         status: 'history'
       }
     },
-    // New deleted item example - RISC form
+    // Components without HyD codes (for testing validation)
     { 
-      id: 'DEL0001-RISC-TMP-B-5-00001', 
-      requestNo: 'DEL0001-RISC-TMP-B-5-00001', 
-      updateDate: '2024-11-15', 
-      status: 'Approved', 
-      bindingStatus: 'history', 
-      linkedToCurrent: false, 
-      objects: ['TEMP-COL-B-999'], // Temporary column component, deleted in latest version
-      createdBy: 'Sarah Wilson',
-      changes: ['Temporary column component deleted', 'Component removed due to design optimization', 'RISC form archived and saved'],
-      hydCode: { project: 'HY202404', originator: 'CSG', system: 'FRAME', location: 'WC_C2', discipline: 'ST_GE', sequential_number: 'CONCRETE' },
-      boundModelVersionId: 'v1.8'
+      id: 'INVALID-001', 
+      name: 'Beam Without HyD Code', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: null as any, // Completely missing HyD code
+      properties: { 
+        position: 'Zone B Beam Area', 
+        material: 'Steel', 
+        volume: '12.5m³',
+        status: 'current'
+      }
+    },
+    { 
+      id: 'INVALID-002', 
+      name: 'Column With Incomplete HyD Code', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: { project: '', originator: '', volume: '', system: '', location: '', discipline: '', sequential_number: '' }, // Incomplete HyD code
+      properties: { 
+        position: 'Zone C Column Area', 
+        material: 'Concrete', 
+        volume: '8.3m³',
+        status: 'current'
+      }
+    },
+    { 
+      id: 'INVALID-003', 
+      name: 'Wall With Partial HyD Code', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '5.2m³', system: '', location: '', discipline: '', sequential_number: '' }, // Partial HyD code
+      properties: { 
+        position: 'Zone D Wall Area', 
+        material: 'Concrete Block', 
+        volume: '5.2m³',
+        status: 'current'
+      }
+    },
+    { 
+      id: 'INVALID-004', 
+      name: 'Slab Missing HyD System', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '22.1m³', system: '', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' }, // Missing system field
+      properties: { 
+        position: 'Zone E Slab Area', 
+        material: 'Reinforced Concrete', 
+        volume: '22.1m³',
+        status: 'current'
+      }
+    },
+    { 
+      id: 'INVALID-005', 
+      name: 'Stair Without Location Code', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: '18.7m³', system: 'FRAME', location: '', discipline: 'ST_FD', sequential_number: 'CONCRETE' }, // Missing location field
+      properties: { 
+        position: 'Zone F Stair Area', 
+        material: 'Precast Concrete', 
+        volume: '18.7m³',
+        status: 'current'
+      }
+    },
+    { 
+      id: 'INVALID-006', 
+      name: 'Undefined HyD Code Component', 
+      version: 'current', 
+      modelVersionId: 'current',
+      objectGroup: 'OBJ-GROUP-INVALID',
+      hydCode: undefined as any, // Undefined HyD code
+      properties: { 
+        position: 'Zone G Undefined Area', 
+        material: 'Mixed Materials', 
+        volume: '7.8m³',
+        status: 'current'
+      }
     }
   ]);
 
@@ -515,6 +602,20 @@ const DWSSBIMDashboard = () => {
       createdBy: 'Mike Johnson', 
       changes: ['Component position adjusted', 'Material parameters updated'],
       hydCode: { project: 'HY202404', originator: 'CSG', system: 'FOUNDATION', location: 'WC_B8', discipline: 'ST_FD', sequential_number: 'CONCRETE' },
+      boundModelVersionId: 'v1.8'
+    },
+    // Deleted item example - RISC form
+    { 
+      id: 'DEL0001-RISC-TMP-B-5-00001', 
+      requestNo: 'DEL0001-RISC-TMP-B-5-00001', 
+      updateDate: '2024-11-15', 
+      status: 'Approved', 
+      bindingStatus: 'history', 
+      linkedToCurrent: false, 
+      objects: ['TEMP-COL-B-999'], // Temporary column component, deleted in latest version
+      createdBy: 'Sarah Wilson',
+      changes: ['Temporary column component deleted', 'Component removed due to design optimization', 'RISC form archived and saved'],
+      hydCode: { project: 'HY202404', originator: 'CSG', volume: 'SITE-A', system: 'FRAME', location: 'WC_C2', discipline: 'ST_GE', sequential_number: 'CONCRETE' },
       boundModelVersionId: 'v1.8'
     }
   ]);
@@ -927,6 +1028,7 @@ const DWSSBIMDashboard = () => {
     // Clear all highlights and selection states
     setFilterHighlightSet([]);
     setManualHighlightSet([]);
+    setInvalidHydHighlightSet([]); // Clear red highlights
     setSelectedRISC(null);
     setSelectedFile(null);
     setHoveredObjects([]);
@@ -1184,7 +1286,7 @@ const DWSSBIMDashboard = () => {
     // Get all components based on selected model version
     let filteredComponents = components.filter(obj => obj.modelVersionId === selectedModelVersion);
     
-    // Apply HyD code filtering if active
+    // Apply HyD code filtering if active (this will automatically exclude components without valid HyD codes)
     if (hasHydCodeFilter()) {
       filteredComponents = filteredComponents.filter(obj => matchesHydCodeFilter(obj.hydCode));
     }
@@ -1237,8 +1339,31 @@ const DWSSBIMDashboard = () => {
     });
   };
 
+  // Check if component has a valid HyD code
+  const hasValidHydCode = (component: any): boolean => {
+    if (!component.hydCode) return false;
+    
+    const requiredFields = ['project', 'originator', 'volume', 'system', 'location', 'discipline', 'sequential_number'];
+    return requiredFields.every(field => 
+      component.hydCode[field as keyof typeof component.hydCode] && 
+      component.hydCode[field as keyof typeof component.hydCode].trim() !== ''
+    );
+  };
+
   // HyD Code matching function
-  const matchesHydCodeFilter = (objHydCode: HydCode): boolean => {
+  const matchesHydCodeFilter = (objHydCode: HydCode | null | undefined): boolean => {
+    // Components without hydCode never match filters
+    if (!objHydCode) return false;
+    
+    // Components with incomplete HyD codes never match filters
+    const requiredFields = ['project', 'originator', 'volume', 'system', 'location', 'discipline', 'sequential_number'];
+    const hasCompleteHydCode = requiredFields.every(field => 
+      objHydCode[field as keyof HydCode] && 
+      objHydCode[field as keyof HydCode].trim() !== ''
+    );
+    
+    if (!hasCompleteHydCode) return false;
+    
     return Object.keys(hydCodeFilter).every(key => {
       if (!hydCodeFilter[key as keyof HydCode]) return true;
       return objHydCode[key as keyof HydCode] === hydCodeFilter[key as keyof HydCode];
@@ -1262,12 +1387,7 @@ const DWSSBIMDashboard = () => {
       // 获取匹配HydCode筛选条件的组件
       const filteredComponents = components
         .filter(obj => obj.modelVersionId === selectedModelVersion)
-        .filter(obj => {
-          return Object.keys(newHydCodeFilter).every(key => {
-            if (!newHydCodeFilter[key as keyof HydCode]) return true;
-            return obj.hydCode[key as keyof HydCode] === newHydCodeFilter[key as keyof HydCode];
-          });
-        })
+        .filter(obj => matchesHydCodeFilter(obj.hydCode))
         .map(obj => obj.id);
       
       // 设置筛选高亮集合，这些组件将显示黄色高光
@@ -1569,6 +1689,13 @@ const DWSSBIMDashboard = () => {
         componentId: component.id,
         isFromTree: false
       });
+      return;
+    }
+    
+    // Check if component is red-highlighted and clear it if clicked
+    const isRedHighlighted = invalidHydHighlightSet.includes(component.id);
+    if (isRedHighlighted) {
+      setInvalidHydHighlightSet(prev => prev.filter(id => id !== component.id));
       return;
     }
     
@@ -3766,6 +3893,50 @@ const DWSSBIMDashboard = () => {
       componentsForFiles = blueHighlightSet;
       highlightType = 'blue';
       
+      // 获取选中的构件对象用于HyD代码验证
+      const selectedComponents = components.filter(comp => 
+        componentsForFiles.includes(comp.id) && 
+        comp.modelVersionId === selectedModelVersion
+      );
+      
+      // 使用HyD代码验证服务验证选中的构件
+      const validation = BindingService.validateSelectedComponentsForBinding(selectedComponents);
+      
+      if (!validation.isValid) {
+        if (validation.allInvalid) {
+          // 情况一和二：单个构件或所有构件都无HyD代码
+          const title = "Cannot Perform File Binding";
+          const message = selectedComponents.length === 1 
+            ? "This component does not have a HyD code and cannot perform file binding operations."
+            : "These components do not have HyD codes and cannot perform file binding operations.";
+          
+          setHydValidationModal({
+            show: true,
+            title,
+            message,
+            invalidComponentIds: []
+          });
+        } else if (validation.partiallyInvalid) {
+          // 情况三：部分构件有HyD代码，部分没有
+          const invalidComponentIds = validation.invalidComponents.map(comp => comp.id);
+          
+          setHydValidationModal({
+            show: true,
+            title: "Mixed HyD Code Status",
+            message: "Some of these components do not have HyD codes. Please deselect the components without HyD codes before performing file binding operations.",
+            invalidComponentIds
+          });
+          
+          // 高亮无HyD代码的构件为红色，同时从蓝色高光中移除它们
+          setInvalidHydHighlightSet(invalidComponentIds);
+          
+          // 从手动高光集合中移除无效构件（红色替换蓝色）
+          setManualHighlightSet(prev => prev.filter(id => !invalidComponentIds.includes(id)));
+        }
+        setContextMenu({...contextMenu, visible: false});
+        return;
+      }
+      
       setSelectedComponentsForFiles(componentsForFiles);
       setSelectedComponentsHighlightType(highlightType);
       setShowFileManagement(true);
@@ -3807,7 +3978,8 @@ const DWSSBIMDashboard = () => {
       if (!contextMenu.componentId) return false;
       
       // 只有蓝色手动高亮构件可以显示文件管理菜单，黄色筛选高亮构件不可以
-      return manualHighlightSet.includes(contextMenu.componentId);
+      // 同时允许有多个手动选中的构件时显示（用于测试混合情况）
+      return manualHighlightSet.includes(contextMenu.componentId) || manualHighlightSet.length > 0;
     };
     
     // 判断是否显示添加到绑定面板选项
@@ -5868,7 +6040,7 @@ const DWSSBIMDashboard = () => {
                                   onClick={() => handleListItemClick(form, 'risc')}
                                   onDoubleClick={() => handleDoubleClick(form, 'risc')}
                                 >
-                                  <td className="py-2 px-3">
+                                  <td className="py-2 px-3 relative">
                                     <a 
                                       href="#" 
                                       onClick={(e) => {
@@ -5879,6 +6051,17 @@ const DWSSBIMDashboard = () => {
                                     >
                                       {form.requestNo}
                                     </a>
+                                    {/* HyD过滤范围外组件指示器 - 移动到RequestNo右上角 */}
+                                    {hasComponentsOutsideHydFilter(form) && (
+                                      <div className="group absolute top-1 right-1">
+                                        <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center border border-white">
+                                          <span className="text-[10px] font-bold">!</span>
+                                        </div>
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                          Some components outside HyD filter scope
+                                        </div>
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="py-2 px-3 text-gray-500">
                                     {form.updateDate}
@@ -5899,16 +6082,6 @@ const DWSSBIMDashboard = () => {
                                           {getBindingIcon(form)}
                                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                                             {getBindingIconTooltip(form)}
-                                          </div>
-                                        </div>
-                                      )}
-                                      {hasComponentsOutsideHydFilter(form) && (
-                                        <div className="group relative">
-                                          <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
-                                            <span className="text-[10px] font-bold">!</span>
-                                          </div>
-                                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                            Some components outside HyD filter scope
                                           </div>
                                         </div>
                                       )}
@@ -6040,6 +6213,7 @@ const DWSSBIMDashboard = () => {
                         </div>
                       )}
 
+
                       {/* HyD筛选模式下的控制按钮 */}
                       {hasHydCodeFilter && !isBindingMode && (
                         <div className="mb-4 flex justify-center space-x-3">
@@ -6087,14 +6261,28 @@ const DWSSBIMDashboard = () => {
                           const isInManualSet = manualHighlightSet.includes(component.id);
                           const isInCart = bindingCart.objects.find(o => o.id === component.id);
                           const isHovered = hoveredObjects.includes(component.id);
+                          const isRedHighlighted = invalidHydHighlightSet.includes(component.id);
                           
                           // 颜色逻辑 - 支持黄色悬浮覆盖蓝色高亮
                           let colorClass = '';
                           let borderClass = '';
                           let scaleClass = '';
                           
-                          // 1. 悬浮高光 - 最高优先级
-                          if (isHovered) {
+                          // 1. 红色高光 - 最高优先级（错误/无效状态，不受悬浮影响）
+                          if (isRedHighlighted) {
+                            colorClass = 'bg-red-500 text-white shadow-lg';
+                            borderClass = 'border-red-600';
+                            scaleClass = 'transform scale-110';
+                            
+                            // 红色高光构件悬浮时加强效果
+                            if (isHovered) {
+                              colorClass = 'bg-red-600 text-white shadow-xl';
+                              borderClass = 'border-red-700';
+                              scaleClass = 'transform scale-115 z-10';
+                            }
+                          }
+                          // 2. 悬浮高光 - 第二优先级（仅对非红色高光构件）
+                          else if (isHovered) {
                             // 当视图中存在任何持续高亮时：悬浮显示黄色临时高亮
                             if (finalHighlightSet.length > 0) {
                               colorClass = 'bg-yellow-400 text-gray-800 shadow-xl';
@@ -6108,20 +6296,19 @@ const DWSSBIMDashboard = () => {
                               scaleClass = 'transform scale-115 z-10';
                             }
                           }
-                          // 2. 手动高光 - 第二优先级（蓝色高光）
-                          // 购物车状态不影响视图高光显示
+                          // 3. 手动高光 - 第三优先级（蓝色高光）
                           else if (isInManualSet) {
                             colorClass = 'bg-blue-500 text-white shadow-lg';
                             borderClass = 'border-blue-600';
                             scaleClass = 'transform scale-110';
                           }
-                          // 3. HyD Code筛选的黄色高光 - 第三优先级（仅当未被手动选择时显示）
+                          // 4. HyD Code筛选的黄色高光 - 第四优先级（仅当未被手动选择时显示）
                           else if (hasHydCodeFilter() && isInFilterSet) {
                             colorClass = 'bg-yellow-200 text-gray-800 shadow-md';
                             borderClass = 'border-yellow-300';
                             scaleClass = 'transform scale-103';
                           }
-                          // 4. 默认状态 - 最低优先级
+                          // 5. 默认状态 - 最低优先级
                           else {
                             colorClass = 'bg-white bg-opacity-90 text-gray-700';
                             borderClass = 'border-gray-300';
@@ -6450,7 +6637,7 @@ const DWSSBIMDashboard = () => {
                             onMouseLeave={handleItemLeave}
                           >
                             <div className="flex items-center">
-                              <div className="mr-3 flex-shrink-0">
+                              <div className="mr-3 flex-shrink-0 relative">
                                 {file.type === 'Method Statement' && (
                                   <div className="w-10 h-10 bg-red-100 rounded-md flex items-center justify-center">
                                     <FileText className="w-5 h-5 text-red-500" />
@@ -6469,6 +6656,18 @@ const DWSSBIMDashboard = () => {
                                 {file.type === 'Test Result' && (
                                   <div className="w-10 h-10 bg-purple-100 rounded-md flex items-center justify-center">
                                     <FileText className="w-5 h-5 text-purple-500" />
+                                  </div>
+                                )}
+                                
+                                {/* HyD过滤范围外组件指示器 - 移动到文件图标右上角 */}
+                                {hasComponentsOutsideHydFilter(file) && (
+                                  <div className="group absolute -top-1 -right-1">
+                                    <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center border border-white">
+                                      <span className="text-[10px] font-bold">!</span>
+                                    </div>
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                                      Some components outside HyD filter scope
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -6578,18 +6777,6 @@ const DWSSBIMDashboard = () => {
                                     {getBindingIcon(file)}
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                                       {getBindingIconTooltip(file)}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* HyD过滤范围外组件指示器 */}
-                                {hasComponentsOutsideHydFilter(file) && (
-                                  <div className="group relative">
-                                    <div className="w-4 h-4 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
-                                      <span className="text-[10px] font-bold">!</span>
-                                    </div>
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                      Some components outside HyD filter scope
                                     </div>
                                   </div>
                                 )}
@@ -6777,6 +6964,50 @@ const DWSSBIMDashboard = () => {
             </div>
             <div className="px-6 py-4 flex-1 overflow-auto">
               <pre className="whitespace-pre-wrap text-sm text-gray-800">{userGuideContent}</pre>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* HyD Code Validation Modal */}
+      {hydValidationModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6 bg-red-50 rounded-t-lg">
+              <div className="flex items-center">
+                <AlertTriangle className="w-6 h-6 mr-3 text-red-600" />
+                <h3 className="text-lg font-semibold text-gray-900">{hydValidationModal.title}</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 mb-6">{hydValidationModal.message}</p>
+              {hydValidationModal.invalidComponentIds && hydValidationModal.invalidComponentIds.length > 0 && (
+                <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+                  <h4 className="text-sm font-medium text-red-800 mb-2">Components without HyD codes (highlighted in red):</h4>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {hydValidationModal.invalidComponentIds.map(id => {
+                      const component = components.find(c => c.id === id);
+                      return (
+                        <li key={id} className="flex items-center">
+                          <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                          {component ? component.name : id}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="text-xs text-red-600 mt-2">
+                    Click on the red-highlighted components to deselect them.
+                  </p>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setHydValidationModal({ show: false, title: '', message: '', invalidComponentIds: [] })}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                  OK
+                </button>
+              </div>
             </div>
           </div>
         </div>

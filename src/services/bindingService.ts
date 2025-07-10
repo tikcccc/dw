@@ -1,5 +1,6 @@
 // 绑定管理服务
 import { Component, FileItem, BindingCart } from '../types';
+import { HydCodeValidator, BatchValidationResult } from './hydCodeValidator';
 
 export class BindingService {
   // 添加文件到绑定购物车
@@ -54,6 +55,13 @@ export class BindingService {
     const existingObj = bindingCart.objects.find(existing => existing.id === obj.id);
     if (existingObj) {
       alert('该构件已在绑定购物车中');
+      return;
+    }
+
+    // HyD代码验证
+    const validation = HydCodeValidator.validateComponent(obj);
+    if (!validation.isValid) {
+      alert(`构件 "${obj.name}" 无法添加到购物车：\n${validation.errorMessage}`);
       return;
     }
 
@@ -283,6 +291,13 @@ export class BindingService {
     bindingCart: BindingCart,
     setBindingCart: (cart: BindingCart) => void
   ): boolean {
+    // 批量验证HyD代码
+    const batchValidation = HydCodeValidator.validateComponentBatch(componentsToAdd);
+    if (!batchValidation.isValid) {
+      alert(`无法添加构件到购物车：\n${batchValidation.errorMessage}`);
+      return false;
+    }
+
     const existingIds = new Set(bindingCart.objects.map(obj => obj.id));
     const newComponents = componentsToAdd.filter(comp => !existingIds.has(comp.id));
     
@@ -305,5 +320,10 @@ export class BindingService {
       alert('选中的构件已经在购物车中');
       return false;
     }
+  }
+
+  // 验证选中的构件是否可以进行绑定操作（用于右键菜单验证）
+  static validateSelectedComponentsForBinding(selectedComponents: Component[]): BatchValidationResult {
+    return HydCodeValidator.validateSelectedComponentsForBinding(selectedComponents);
   }
 } 

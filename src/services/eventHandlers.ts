@@ -1,5 +1,7 @@
 // 事件处理服务
 import { Component, RiscForm, FileItem, BindingCart, HydCode } from '../types';
+import { BindingService } from './bindingService';
+import { HydCodeValidator, BatchValidationResult } from './hydCodeValidator';
 
 export class EventHandlers {
   // HyD Code筛选变更处理
@@ -211,5 +213,68 @@ export class EventHandlers {
   ): void {
     setCurrentView('dashboard');
     setDetailItem(null);
+  }
+
+  // 右键菜单文件管理验证处理
+  static handleFileManagementClick(
+    selectedComponents: Component[],
+    setInvalidHydHighlightSet: (set: string[]) => void,
+    setShowFileManagement: (show: boolean) => void,
+    setSelectedComponentsForFiles: (ids: string[]) => void
+  ): boolean {
+    // 使用绑定服务进行验证
+    const validationResult = BindingService.validateSelectedComponentsForBinding(selectedComponents);
+    
+    if (!validationResult.isValid) {
+      // 显示验证错误
+      alert(validationResult.errorMessage);
+      
+      // 如果是部分无效场景，设置红色高光
+      if (validationResult.partiallyInvalid) {
+        const invalidIds = validationResult.invalidComponents.map(comp => comp.id);
+        setInvalidHydHighlightSet(invalidIds);
+      }
+      
+      return false; // 阻止进入文件管理
+    }
+
+    // 验证通过，进入文件管理
+    setShowFileManagement(true);
+    setSelectedComponentsForFiles(selectedComponents.map(comp => comp.id));
+    return true;
+  }
+
+  // 红色高光构件点击处理（取消红色高光）
+  static handleInvalidHydComponentClick(
+    componentId: string,
+    invalidHydHighlightSet: string[],
+    setInvalidHydHighlightSet: (set: string[]) => void
+  ): void {
+    // 从红色高光集合中移除该构件
+    const updatedSet = invalidHydHighlightSet.filter(id => id !== componentId);
+    setInvalidHydHighlightSet(updatedSet);
+  }
+
+  // 清空红色高光集合
+  static clearInvalidHydHighlights(
+    setInvalidHydHighlightSet: (set: string[]) => void
+  ): void {
+    setInvalidHydHighlightSet([]);
+  }
+
+  // 验证并高亮显示无效构件
+  static validateAndHighlightInvalidComponents(
+    components: Component[],
+    setInvalidHydHighlightSet: (set: string[]) => void
+  ): BatchValidationResult {
+    const validationResult = HydCodeValidator.validateComponentBatch(components);
+    
+    if (!validationResult.isValid && validationResult.partiallyInvalid) {
+      // 只在部分无效的情况下设置红色高光
+      const invalidIds = validationResult.invalidComponents.map(comp => comp.id);
+      setInvalidHydHighlightSet(invalidIds);
+    }
+    
+    return validationResult;
   }
 } 

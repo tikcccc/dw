@@ -12,11 +12,13 @@ interface BIMViewerProps {
   finalHighlightSet: string[];
   filterHighlightSet: string[];
   manualHighlightSet: string[];
+  invalidHydHighlightSet: string[];
   hoveredObjects: string[];
   bindingCart: BindingCart;
   isBindingMode: boolean;
   hasHydCodeFilter: boolean;
   onComponentClick: (component: Component) => void;
+  onInvalidHydComponentClick?: (componentId: string) => void;
   onAddAllHighlightedToCart?: () => void;
   onSelectAllFilteredComponents?: () => void;
   onClearFilteredManualSelection?: () => void;
@@ -36,11 +38,13 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
   finalHighlightSet,
   filterHighlightSet,
   manualHighlightSet,
+  invalidHydHighlightSet,
   hoveredObjects,
   bindingCart,
   isBindingMode,
   hasHydCodeFilter,
   onComponentClick,
+  onInvalidHydComponentClick,
   onAddAllHighlightedToCart,
   onSelectAllFilteredComponents,
   onClearFilteredManualSelection,
@@ -55,13 +59,27 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
     const isHovered = hoveredObjects.includes(component.id);
     const isInCart = bindingCart.objects.find(o => o.id === component.id);
     const isInHydCodeFilter = hasHydCodeFilter && filterHighlightSet.includes(component.id);
+    const isInvalidHyd = invalidHydHighlightSet.includes(component.id);
     
     let colorClass = '';
     let borderClass = '';
     let scaleClass = '';
     
-    // 1. 悬浮高光 - 最高优先级
-    if (isHovered) {
+    // 1. 红色高光 - 最高优先级（HyD验证失败的构件，不受悬浮影响）
+    if (isInvalidHyd) {
+      colorClass = 'bg-red-500 text-white shadow-lg';
+      borderClass = 'border-red-600';
+      scaleClass = 'transform scale-105';
+      
+      // 红色高光构件悬浮时加强效果
+      if (isHovered) {
+        colorClass = 'bg-red-600 text-white shadow-xl';
+        borderClass = 'border-red-700';
+        scaleClass = 'transform scale-110 z-10';
+      }
+    }
+    // 2. 悬浮高光 - 第二优先级（仅对非红色高光构件）
+    else if (isHovered) {
       // 绑定模式下，悬浮统一显示黄色
       if (isBindingMode) {
         colorClass = 'bg-yellow-400 text-gray-800 shadow-md';
@@ -84,19 +102,19 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
         }
       }
     }
-    // 2. 蓝色持续高光 - 第二优先级（手动选择的构件或绑定购物车中的构件）
+    // 3. 蓝色持续高光 - 第三优先级（手动选择的构件或绑定购物车中的构件）
     else if (isInManualSet || isInCart) {
       colorClass = 'bg-blue-500 text-white shadow-lg';
       borderClass = 'border-blue-600';
       scaleClass = 'transform scale-105';
     }
-    // 3. HyD Code筛选的黄色高光 - 第三优先级（仅当未被手动选择时显示）
+    // 4. HyD Code筛选的黄色高光 - 第四优先级（仅当未被手动选择时显示）
     else if (isInHydCodeFilter) {
       colorClass = 'bg-yellow-200 text-gray-800 shadow-md';
       borderClass = 'border-yellow-300';
       scaleClass = 'transform scale-103';
     }
-    // 4. 默认状态 - 最低优先级
+    // 5. 默认状态 - 最低优先级
     else {
       colorClass = 'bg-white bg-opacity-90 text-gray-700 hover:bg-opacity-100';
       borderClass = 'border-gray-300 hover:border-gray-400';
@@ -198,13 +216,22 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4 w-full">
                   {components.map(component => {
                     const { colorClass, borderClass, scaleClass } = getComponentColorClasses(component);
+                    const isInvalidHyd = invalidHydHighlightSet.includes(component.id);
+                    
+                    const handleClick = () => {
+                      if (isInvalidHyd && onInvalidHydComponentClick) {
+                        onInvalidHydComponentClick(component.id);
+                      } else {
+                        onComponentClick(component);
+                      }
+                    };
                     
                     return (
                       <div 
                         key={component.id}
                         className={`p-3 rounded-lg cursor-pointer transition-all relative border-2 ${colorClass} ${borderClass} ${scaleClass}`}
-                        onClick={() => onComponentClick(component)}
-                        title={`${component.name} (${component.objectGroup})`}
+                        onClick={handleClick}
+                        title={isInvalidHyd ? `${component.name} (无效HyD代码 - 点击取消高光)` : `${component.name} (${component.objectGroup})`}
                       >
                         <div className="text-xs font-medium truncate flex items-center justify-between mb-1">
                           <span className="truncate">{component.name}</span>
@@ -233,6 +260,11 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
                   {manualHighlightSet.length > 0 && (
                     <span className="ml-2 text-purple-600">
                       (手动选择: {manualHighlightSet.length} 个)
+                    </span>
+                  )}
+                  {invalidHydHighlightSet.length > 0 && (
+                    <span className="ml-2 text-red-600">
+                      (无效HyD代码: {invalidHydHighlightSet.length} 个)
                     </span>
                   )}
                 </div>

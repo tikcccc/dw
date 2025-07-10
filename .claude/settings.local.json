@@ -9,7 +9,9 @@
       "Bash(npm run dev:*)",
       "Bash(npm run deploy:*)",
       "Bash(ls:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(find:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
