@@ -744,10 +744,14 @@ const DWSSBIMDashboard = () => {
   // Activity log data
   const [activityLogs, setActivityLogs] = useState([
     { id: 1, timestamp: '2025-03-08 14:30:15', user: 'Administrator', role: 'Admin', action: 'FILE_BIND_SUBMIT', target: 'File', targetDetail: 'Construction Drawing.pdf', details: 'Associated file "Construction Drawing.pdf" with components "OBJ-GROUP-001, OBJ-GROUP-002"', ip: '192.168.1.100' },
-    { id: 2, timestamp: '2025-03-08 13:15:22', user: 'John Doe', role: 'Authorized User', action: 'RISC_CREATE_REQUEST', target: 'RISC Form', targetDetail: 'TRN0001-RISC-TRC-B-5-00003', details: 'Created new RISC form "TRN0001-RISC-TRC-B-5-00003"', ip: '192.168.1.101' },
+    { id: 2, timestamp: '2025-03-08 13:15:22', user: 'Administrator', role: 'Admin', action: 'FILE_TYPE_UPDATE', target: 'File Type', targetDetail: 'Construction Drawing', details: 'Modified file type "Construction Drawing"', ip: '192.168.1.100' },
     { id: 3, timestamp: '2025-03-08 12:45:33', user: 'Jane Smith', role: 'Authorized User', action: 'FILE_UPLOAD', target: 'File', targetDetail: 'Material Test Report.pdf', details: 'Uploaded file "Material Test Report.pdf"', ip: '192.168.1.102' },
-    { id: 4, timestamp: '2025-03-08 11:20:18', user: 'Mike Johnson', role: 'View-only User', action: 'LOGIN_SUCCESS', target: 'User', targetDetail: 'mike.johnson@example.com', details: 'User successfully logged into system', ip: '192.168.1.103' },
-    { id: 5, timestamp: '2025-03-08 10:55:44', user: 'Administrator', role: 'Admin', action: 'USER_ROLE_CHANGE', target: 'User', targetDetail: 'sarah.wilson@example.com', details: 'Changed user "Sarah Wilson" role from "View-only User" to "Authorized User"', ip: '192.168.1.100' }
+    { id: 4, timestamp: '2025-03-08 12:30:18', user: 'Administrator', role: 'Admin', action: 'FILE_TYPE_CREATE', target: 'File Type', targetDetail: 'Safety Report', details: 'Created new file type "Safety Report"', ip: '192.168.1.100' },
+    { id: 5, timestamp: '2025-03-08 12:00:25', user: 'Administrator', role: 'Admin', action: 'FILE_UNBIND', target: 'File', targetDetail: 'Old Specification.pdf', details: 'Removed binding of file "Old Specification.pdf" from component "OBJ-GROUP-003"', ip: '192.168.1.100' },
+    { id: 6, timestamp: '2025-03-08 11:45:30', user: 'Administrator', role: 'Admin', action: 'USER_DISABLE', target: 'User', targetDetail: 'inactive.user@example.com', details: 'Disabled user account "Inactive User"', ip: '192.168.1.100' },
+    { id: 7, timestamp: '2025-03-08 11:20:18', user: 'Mike Johnson', role: 'View-only User', action: 'LOGIN_SUCCESS', target: 'User', targetDetail: 'mike.johnson@example.com', details: 'User successfully logged into system', ip: '192.168.1.103' },
+    { id: 8, timestamp: '2025-03-08 11:15:35', user: 'Tom Wilson', role: 'Authorized User', action: 'FILE_TYPE_CHANGE', target: 'File', targetDetail: 'Project Manual.pdf', details: 'Changed file type of "Project Manual.pdf" from "General Document" to "Technical Specification"', ip: '192.168.1.105' },
+    { id: 9, timestamp: '2025-03-08 10:55:44', user: 'Administrator', role: 'Admin', action: 'USER_ROLE_CHANGE', target: 'User', targetDetail: 'sarah.wilson@example.com', details: 'Changed user "Sarah Wilson" role from "View-only User" to "Authorized User"', ip: '192.168.1.100' }
   ]);
 
   // User search state
