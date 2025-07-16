@@ -744,7 +744,7 @@ const DWSSBIMDashboard = () => {
   // Activity log data
   const [activityLogs, setActivityLogs] = useState([
     { id: 1, timestamp: '2025-03-08 14:30:15', user: 'Administrator', role: 'Admin', action: 'FILE_BIND_SUBMIT', target: 'File', targetDetail: 'Construction Drawing.pdf', details: 'Associated file "Construction Drawing.pdf" with components "OBJ-GROUP-001, OBJ-GROUP-002"', ip: '192.168.1.100' },
-    { id: 1, timestamp: '2025-03-08 14:30:15', user: 'Smith', role: 'Admin', action: 'FILE_DELETE', target: 'File', targetDetail: 'Construction Drawing.pdf', details: 'Deleted file "Construction Drawing.pdf" from platform ', ip: '192.168.1.100' },
+    { id: 1, timestamp: '2025-03-08 14:30:15', user: 'Smith', role: 'Admin', action: 'FILE_DELETE', target: 'File', targetDetail: 'Construction.pdf', details: 'Deleted file "Construction.pdf" from platform ', ip: '192.168.1.100' },
     { id: 2, timestamp: '2025-03-08 13:15:22', user: 'Administrator', role: 'Admin', action: 'FILE_TYPE_UPDATE', target: 'File Type', targetDetail: 'Construction Drawing', details: 'Modified file type "Construction Drawing"', ip: '192.168.1.100' },
     { id: 3, timestamp: '2025-03-08 12:45:33', user: 'Jane Smith', role: 'Authorized User', action: 'FILE_UPLOAD', target: 'File', targetDetail: 'Material Test Report.pdf', details: 'Uploaded file "Material Test Report.pdf"', ip: '192.168.1.102' },
     { id: 4, timestamp: '2025-03-08 12:30:18', user: 'Administrator', role: 'Admin', action: 'FILE_TYPE_CREATE', target: 'File Type', targetDetail: 'Safety Report', details: 'Created new file type "Safety Report"', ip: '192.168.1.100' },
